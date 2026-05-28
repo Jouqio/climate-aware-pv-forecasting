@@ -1,6 +1,2 @@
-aaa
-aaa
-aaaa
-aaaaa
-aaa
-aaa
+Revisi Rombak Total Jurnal Q1/Q2
+Bismillah
