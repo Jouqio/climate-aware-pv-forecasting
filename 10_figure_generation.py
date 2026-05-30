@@ -3,7 +3,7 @@
 NOTEBOOK 10: FIGURE GENERATION
 =============================================================================
 Purpose  : Generate all publication-ready figures for Q1/Q2 submission.
-           13 figures targeting Applied Energy / ECM journal standards.
+           13 figures targeting Applied Energy / ECM journal standards. ss
            All figures: 300 DPI, vector-ready, consistent styling.
 
 Input    : All outputs from notebooks 01–09
