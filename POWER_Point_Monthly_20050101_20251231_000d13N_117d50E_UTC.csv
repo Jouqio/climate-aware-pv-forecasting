@@ -1,6 +1,6 @@
 -BEGIN HEADER-
 NASA/POWER Source Native Resolution Monthly and Annual 
-Dates (month/day/year): 01/01/2005 through 12/31/2025 in UTCcc
+Dates (month/day/year): 01/01/2005 through 12/31/2025 in UTC
 Location: Latitude  0.1333   Longitude 117.5 
 Elevation from MERRA-2: Average for 0.5 x 0.625 degree lat/lon region = 37.89 meters
 The value for missing source data that cannot be computed or is outside of the sources availability range: -999 
