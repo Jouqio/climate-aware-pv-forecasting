@@ -7,7 +7,7 @@ Purpose  : Load NASA POWER CSV, parse wide-format, pivot to monthly panel,
 Input    : POWER_Point_Monthly_20050101_20251231_000d13N_117d50E_UTC.csv
 Output   : data/01_nasa_power_clean.parquet
            data/01_data_quality_report.csv
-Dependencies : pandas, numpy
+Dependencies : pandas, nump
 =============================================================================
 """
 
