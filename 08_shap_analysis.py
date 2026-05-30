@@ -3,7 +3,7 @@
 NOTEBOOK 08: SHAP ANALYSIS + ECONOMETRIC-XAI CORRESPONDENCE
 =============================================================================
 Purpose  : Compute SHAP values for XGBoost model.
-           Build "Econometric-XAI Correspondence" — the paper's novelll
+           Build "Econometric-XAI Correspondence" — the paper's novel
            interpretability contribution.
            Compare OLS-HC3 coefficients vs SHAP feature impacts.
            Identify nonlinear effects and ENSO interactions.
