@@ -1,0 +1,88 @@
+# ============================================================
+# .gitignore — climate-aware-pv-forecasting
+# Disesuaikan dengan struktur 10-notebook pipeline
+# ============================================================
+
+# ── Python bytecode ─────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+
+# ── Virtual environments ─────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+.env
+.env.local
+.env.*.local
+
+# ── Jupyter Notebook ─────────────────────────────────────────
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── Pipeline data output (dibuat oleh NB01–NB03) ─────────────
+# File parquet dibuat otomatis oleh pipeline → tidak perlu di-commit
+data/
+!data/.gitkeep
+
+# ── Pipeline outputs/results (dibuat oleh NB04–NB09) ─────────
+outputs/
+!outputs/.gitkeep
+
+# ── Figures (dibuat oleh NB10) ────────────────────────────────
+figures/
+!figures/.gitkeep
+
+# ── Saved models (dibuat oleh NB07) ──────────────────────────
+*.pkl
+*.joblib
+*.pt
+*.pth
+
+# ── Raw NASA POWER data ───────────────────────────────────────
+# File ini sudah ter-commit, tambahkan ke .gitignore
+# untuk mencegah versi baru ter-commit secara tidak sengaja
+POWER_Point_Monthly_*.csv
+
+# ── Data format lain ──────────────────────────────────────────
+*.parquet
+*.feather
+*.hdf
+*.h5
+
+# ── ONI / DMI external data (NB03 mentions download) ─────────
+oni.ascii.txt
+dmi_*.csv
+enso_*.csv
+
+# ── Log files ─────────────────────────────────────────────────
+*.log
+*.out
+logs/
+
+# ── Secrets / config lokal ────────────────────────────────────
+.env
+*.secret
+config_local.py
+
+# ── OS & editor ───────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Build / packaging ─────────────────────────────────────────
+dist/
+build/
+*.egg-info/
+.eggs/
+*.egg
