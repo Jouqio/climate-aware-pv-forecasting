@@ -4,7 +4,7 @@ NOTEBOOK 06: SARIMAX + CLIMATE TELECONNECTION MODEL
 =============================================================================
 Purpose  : Fit SARIMAX with ONI/DMI exogenous regressors.
            Grid-search optimal (p,d,q)(P,D,Q)12 order via AIC/BIC.
-           Walk-forward evaluation with 12-month ahead forecasting.
+           Walk-forward evaluation with 12-month ahead forecasting.s
            ENSO phase-conditioned performance analysis.
 
 Input    : data/03_model_ready.parquet
