@@ -4,7 +4,7 @@ NOTEBOOK 07: XGBOOST MODEL
 =============================================================================
 Purpose  : Constrained XGBoost for monthly PV forecasting.
            Deliberately conservative hyperparameters for n=240 training obs.
-           Walk-forward evaluation with IDENTICAL splits as OLS/SARIMAX.ss
+           Walk-forward evaluation with IDENTICAL splits as OLS/SARIMAX.
            Bootstrap prediction intervals.
 
 CONSTRAINT RATIONALE (n=240 training, 12 features):
