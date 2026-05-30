@@ -2,7 +2,7 @@
 =============================================================================
 NOTEBOOK 09: RESIDUAL DIAGNOSTICS + MODEL COMPARISON
 =============================================================================
-Purpose  : Cross-model residual analysis and statistical comparison.js
+Purpose  : Cross-model residual analysis and statistical comparison.
            Diebold-Mariano pairwise tests.
            Friedman multi-model ranking test.
            ENSO-residual linkage analysis.
