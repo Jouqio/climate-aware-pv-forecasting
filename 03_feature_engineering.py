@@ -2,7 +2,7 @@
 =============================================================================
 NOTEBOOK 03: FEATURE ENGINEERING
 =============================================================================
-Purpose  : Build the final 12-feature set for modeling.
+Purpose  : Build the final 12-feature set for modeling
            Includes lag, rolling, anomaly, climate teleconnection features.
            All features designed to be LEAKAGE-SAFE (no Y_stoch components).
 
