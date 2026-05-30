@@ -6,7 +6,7 @@ Purpose  : Build Y_PV with physics-based stochastic uncertainty components.
            Demonstrate deterministic leakage vs. stochastic target.
            This is the CORE METHODOLOGICAL CONTRIBUTION of the paper.
 
-Input    : data/01_nasa_power_clean.parque
+Input    : data/01_nasa_power_clean.parquet
 Output   : data/02_target_reconstructed.parquet
            outputs/02_leakage_demonstration.csv
            outputs/02_stochastic_target_stats.csv
