@@ -6,7 +6,7 @@ Purpose  : Full econometric OLS pipeline with HC3 robust standard errors,
            formal hypothesis testing, and complete diagnostic suite.
            This model provides: (a) interpretable coefficients, (b) formal
            statistical inference, (c) econometric hardening evidence,
-           (d) baseline for Diebold-Mariano comparison.s
+           (d) baseline for Diebold-Mariano comparison.
 
 Input    : data/03_model_ready.parquet
            data/03_final_features.csv
