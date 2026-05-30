@@ -3,7 +3,7 @@
 NOTEBOOK 04: WALK-FORWARD VALIDATION FRAMEWORK
 =============================================================================
 Purpose  : Implement expanding-window walk-forward validation.
-           Define all evaluation metrics (point + probabilistic)
+           Define all evaluation metrics (point + probabilistic).
            Implement Diebold-Mariano and Friedman ranking tests.
 
 Input    : data/03_model_ready.parquet
