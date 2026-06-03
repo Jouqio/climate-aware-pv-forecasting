@@ -21,7 +21,7 @@ from scipy import stats
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# POINT-FORECAST METRICS
+# POINT-FORECAST METRICS.
 # ══════════════════════════════════════════════════════════════════════════
 
 def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
