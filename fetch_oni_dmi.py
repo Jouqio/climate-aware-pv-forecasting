@@ -31,7 +31,7 @@ END_YEAR   = 2025
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# BAGIAN 1: ONI (Oceanic Niño Index) — NOAA CPC
+# BAGIAN 1: ONI (Oceanic Niño Index) — NOAA CPC.
 # ══════════════════════════════════════════════════════════════════════════
 def fetch_oni() -> pd.DataFrame:
     """
