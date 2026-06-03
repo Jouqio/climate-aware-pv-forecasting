@@ -33,6 +33,7 @@ Probabilistic forecasting (P10/P50/P90)
 ---
 
 ## Dataset
+
 ```
 Source: NASA POWER
 
@@ -45,7 +46,6 @@ Period:
 
 January 2005 – December 2025
 ```
-
 
 ---
 
