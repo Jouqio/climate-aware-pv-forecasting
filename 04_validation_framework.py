@@ -20,10 +20,13 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import os, warnings
+from pathlib import Path
 warnings.filterwarnings("ignore")
 
-DATA_DIR = "/home/claude/pv_research/data"
-OUT_DIR  = "/home/claude/pv_research/outputs"
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+OUT_DIR  = BASE_DIR / "outputs"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 df = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
 FINAL_FEATURES = pd.read_csv(f"{DATA_DIR}/03_final_features.csv")["feature"].tolist()

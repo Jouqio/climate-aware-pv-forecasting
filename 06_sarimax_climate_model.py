@@ -24,10 +24,13 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.stats.diagnostic import acorr_ljungbox
 import itertools, warnings, os
+from pathlib import Path
 warnings.filterwarnings("ignore")
 
-DATA_DIR = "/home/claude/pv_research/data"
-OUT_DIR  = "/home/claude/pv_research/outputs"
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+OUT_DIR  = BASE_DIR / "outputs"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 df = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
 df = df.set_index("DATE").asfreq("MS")   # Monthly Start frequency

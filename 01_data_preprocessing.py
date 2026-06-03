@@ -15,11 +15,12 @@ import pandas as pd
 import numpy as np
 import io
 import os
+from pathlib import Path
 
-# ── Paths ──────────────────────────────────────────────────────────────────
-RAW_CSV  = "/mnt/user-data/uploads/POWER_Point_Monthly_20050101_20251231_000d13N_117d50E_UTC.csv"
-OUT_DIR  = "/home/claude/pv_research/data"
-os.makedirs(OUT_DIR, exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parent
+RAW_CSV  = BASE_DIR / "data" / "nasa_power_monthly_bontang_2005_2025.csv"
+OUT_DIR  = BASE_DIR / "data"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ══════════════════════════════════════════════════════════════════════════
 # STEP 1: PARSE NASA POWER WIDE FORMAT

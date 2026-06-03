@@ -35,12 +35,14 @@ import matplotlib.patches as mpatches
 from scipy import stats
 from statsmodels.graphics.tsaplots import plot_acf
 import os, warnings
+from pathlib import Path
 warnings.filterwarnings("ignore")
 
-DATA_DIR   = "/home/claude/pv_research/data"
-OUT_DIR    = "/home/claude/pv_research/outputs"
-FIG_DIR    = "/home/claude/pv_research/figures"
-os.makedirs(FIG_DIR, exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR   = BASE_DIR / "data"
+OUT_DIR    = BASE_DIR / "outputs"
+FIG_DIR    = BASE_DIR / "figures"
+FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Global style ───────────────────────────────────────────────────────────
 plt.rcParams.update({
@@ -510,9 +512,181 @@ plt.close(fig)
 print("  ✓ Fig 12 saved")
 
 # ══════════════════════════════════════════════════════════════════════════
-# SUMMARY
+# FIG 08: MODEL PERFORMANCE COMPARISON
 # ══════════════════════════════════════════════════════════════════════════
-figs_generated = [f for f in os.listdir(FIG_DIR) if f.endswith(".png")]
+print("Generating Fig 08: Model Performance Comparison...")
+
+if predictions_available:
+    df_ols = pd.read_parquet(f"{DATA_DIR}/05_ols_predictions.parquet")
+    df_sar = pd.read_parquet(f"{DATA_DIR}/06_sarimax_predictions.parquet")
+    df_xgb = pd.read_parquet(f"{DATA_DIR}/07_xgboost_predictions.parquet")
+    df_perf = df_ols[['DATE','y_true','y_pred_ols']].merge(
+        df_sar[['DATE','y_pred_sarimax']], on='DATE')
+    df_perf = df_perf.merge(df_xgb[['DATE','y_pred_xgb']], on='DATE')
+
+    fig, axes = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+    axes[0].plot(df_perf['DATE'], df_perf['y_true'], color='black', lw=2, label='Actual')
+    axes[0].plot(df_perf['DATE'], df_perf['y_pred_ols'], color=COLORS['ols'], lw=1.5, label='OLS-HC3')
+    axes[0].plot(df_perf['DATE'], df_perf['y_pred_sarimax'], color=COLORS['sarimax'], lw=1.5, label='SARIMAX+ONI')
+    axes[0].plot(df_perf['DATE'], df_perf['y_pred_xgb'], color=COLORS['xgb'], lw=1.5, label='XGBoost')
+    axes[0].set_ylabel('Y_stoch'); axes[0].set_title('(a) Actual vs Model Predictions')
+    axes[0].legend(loc='upper right')
+
+    rmse_ols = np.sqrt(np.mean((df_perf['y_true'] - df_perf['y_pred_ols'])**2))
+    rmse_sar = np.sqrt(np.mean((df_perf['y_true'] - df_perf['y_pred_sarimax'])**2))
+    rmse_xgb = np.sqrt(np.mean((df_perf['y_true'] - df_perf['y_pred_xgb'])**2))
+    x_pos = np.arange(3)
+    rmse_values = [rmse_ols, rmse_sar, rmse_xgb]
+    axes[1].bar(x_pos, rmse_values,
+                color=[COLORS['ols'], COLORS['sarimax'], COLORS['xgb']], alpha=0.85)
+    axes[1].set_xticks(x_pos)
+    axes[1].set_xticklabels(['OLS-HC3','SARIMAX+ONI','XGBoost'])
+    for i, v in enumerate(rmse_values):
+        axes[1].text(i, v + 0.002, f"{v:.4f}", ha='center', va='bottom', fontweight='bold')
+    axes[1].set_ylabel('RMSE'); axes[1].set_title('(b) Walk-forward RMSE by Model')
+    fig.suptitle('Model Performance Comparison: Actual vs Predictions and RMSE', fontsize=12, fontweight='bold')
+    fig.tight_layout()
+    fig.savefig(f"{FIG_DIR}/fig08_model_performance.png", dpi=150,
+                bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+    print('  ✓ Fig 08 saved')
+else:
+    print('  ⚠ Fig 08 skipped: prediction files unavailable')
+
+# ══════════════════════════════════════════════════════════════════════════
+# FIG 09: PROBABILISTIC FORECAST INTERVALS
+# ══════════════════════════════════════════════════════════════════════════
+print('Generating Fig 09: Probabilistic Forecast Intervals...')
+
+if predictions_available:
+    df_sar = pd.read_parquet(f"{DATA_DIR}/06_sarimax_predictions.parquet")
+    df_xgb = pd.read_parquet(f"{DATA_DIR}/07_xgboost_predictions.parquet")
+    n_plot = min(48, len(df_sar))
+    df_sar_plot = df_sar.tail(n_plot).reset_index(drop=True)
+    df_xgb_plot = df_xgb.tail(n_plot).reset_index(drop=True)
+
+    fig, axes = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+    axes[0].plot(df_sar_plot['DATE'], df_sar_plot['y_true'], color='black', lw=2, label='Actual')
+    axes[0].plot(df_sar_plot['DATE'], df_sar_plot['y_pred_sarimax'], color=COLORS['sarimax'], lw=1.8, label='SARIMAX+ONI')
+    axes[0].fill_between(df_sar_plot['DATE'], df_sar_plot['pi_lower_95'], df_sar_plot['pi_upper_95'],
+                         color=COLORS['sarimax'], alpha=0.25, label='95% PI')
+    axes[0].set_ylabel('Y_stoch'); axes[0].set_title('(a) SARIMAX Probabilistic Forecast')
+    axes[0].legend(loc='upper right')
+
+    axes[1].plot(df_xgb_plot['DATE'], df_xgb_plot['y_true'], color='black', lw=2, label='Actual')
+    axes[1].plot(df_xgb_plot['DATE'], df_xgb_plot['y_pred_xgb'], color=COLORS['xgb'], lw=1.8, label='XGBoost')
+    axes[1].fill_between(df_xgb_plot['DATE'], df_xgb_plot['pi_lower_90'], df_xgb_plot['pi_upper_90'],
+                         color=COLORS['xgb'], alpha=0.25, label='90% PI')
+    axes[1].set_ylabel('Y_stoch'); axes[1].set_title('(b) XGBoost Probabilistic Forecast')
+    axes[1].legend(loc='upper right')
+
+    fig.suptitle('Probabilistic Forecasts with Prediction Intervals', fontsize=12, fontweight='bold')
+    fig.tight_layout()
+    fig.savefig(f"{FIG_DIR}/fig09_probabilistic_forecast.png", dpi=150,
+                bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+    print('  ✓ Fig 09 saved')
+else:
+    print('  ⚠ Fig 09 skipped: prediction files unavailable')
+
+# ══════════════════════════════════════════════════════════════════════════════════
+# FIG 10: SHAP FEATURE IMPORTANCE SUMMARY
+# ══════════════════════════════════════════════════════════════════════════
+print('Generating Fig 10: SHAP Summary...')
+
+if shap_available:
+    shap_summary = pd.read_csv(f"{OUT_DIR}/08_shap_feature_summary.csv")
+    shap_summary = shap_summary.sort_values('mean_abs_SHAP', ascending=True)
+    colors = [COLORS['shap_pos'] if m > 0 else COLORS['shap_neg'] for m in shap_summary['mean_SHAP'].values]
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+    ax.barh(shap_summary['Feature'], shap_summary['mean_abs_SHAP'], color=colors, alpha=0.85)
+    ax.set_xlabel('Mean |SHAP|'); ax.set_title('SHAP Feature Importance Summary')
+    for i, val in enumerate(shap_summary['mean_abs_SHAP']):
+        ax.text(val + 0.0005, i, f"{val:.4f}", va='center', fontsize=8)
+    fig.tight_layout()
+    fig.savefig(f"{FIG_DIR}/fig10_shap_summary.png", dpi=150,
+                bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+    print('  ✓ Fig 10 saved')
+else:
+    print('  ⚠ Fig 10 skipped: SHAP outputs unavailable')
+
+# ══════════════════════════════════════════════════════════════════════════════════
+# FIG 11: OLS-SHAP CORRESPONDENCE
+# ══════════════════════════════════════════════════════════════════════════
+print('Generating Fig 11: OLS-SHAP Correspondence...')
+
+if shap_available:
+    xai_corr = pd.read_csv(f"{OUT_DIR}/08_econometric_xai_correspondence.csv")
+    xai_corr['sign_label'] = xai_corr['sign_concordance'].map({True: 'Agree', False: 'Flip'})
+    fig, ax = plt.subplots(figsize=(12, 8))
+    sc = ax.scatter(xai_corr['OLS_std_effect'], xai_corr['mean_abs_SHAP'],
+                    c=xai_corr['sign_concordance'].map({True: COLORS['shap_pos'], False: COLORS['shap_neg']}),
+                    s=80, alpha=0.85, edgecolor='k')
+    for _, row in xai_corr.iterrows():
+        ax.text(row['OLS_std_effect'], row['mean_abs_SHAP'], row['Feature'], fontsize=8,
+                va='bottom', ha='right')
+    ax.axhline(0, color='gray', lw=1, ls='--')
+    ax.axvline(0, color='gray', lw=1, ls='--')
+    ax.set_xlabel('OLS Standardized Effect'); ax.set_ylabel('Mean |SHAP|')
+    ax.set_title('OLS vs SHAP Correspondence: Econometric Coefficients and Feature Impact')
+    fig.tight_layout()
+    fig.savefig(f"{FIG_DIR}/fig11_ols_shap_correspondence.png", dpi=150,
+                bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+    print('  ✓ Fig 11 saved')
+else:
+    print('  ⚠ Fig 11 skipped: SHAP outputs unavailable')
+
+# ══════════════════════════════════════════════════════════════════════════════════
+# FIG 13: ENSO PHASE FORECASTING
+# ══════════════════════════════════════════════════════════════════════════
+print('Generating Fig 13: ENSO Phase Forecasting...')
+
+if predictions_available:
+    df_meta = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")[['DATE','ENSO_phase']].copy()
+    df_all = df_meta.merge(df_ols[['DATE','y_true','y_pred_ols']], on='DATE', how='inner')
+    df_all = df_all.merge(df_sar[['DATE','y_pred_sarimax']], on='DATE', how='inner')
+    df_all = df_all.merge(df_xgb[['DATE','y_pred_xgb']], on='DATE', how='inner')
+    df_all = df_all[df_all['DATE'] >= pd.Timestamp('2015-01-01')]
+
+    summary = []
+    for phase, grp in df_all.groupby('ENSO_phase'):
+        summary.append({
+            'ENSO_phase': phase,
+            'OLS_RMSE': np.sqrt(np.mean((grp['y_true'] - grp['y_pred_ols'])**2)),
+            'SARIMAX_RMSE': np.sqrt(np.mean((grp['y_true'] - grp['y_pred_sarimax'])**2)),
+            'XGB_RMSE': np.sqrt(np.mean((grp['y_true'] - grp['y_pred_xgb'])**2)),
+            'n_months': len(grp)
+        })
+    df_phase = pd.DataFrame(summary).sort_values('ENSO_phase')
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    x = np.arange(len(df_phase))
+    width = 0.22
+    ax.bar(x - width, df_phase['OLS_RMSE'], width, label='OLS-HC3', color=COLORS['ols'], alpha=0.85)
+    ax.bar(x,         df_phase['SARIMAX_RMSE'], width, label='SARIMAX+ONI', color=COLORS['sarimax'], alpha=0.85)
+    ax.bar(x + width, df_phase['XGB_RMSE'], width, label='XGBoost', color=COLORS['xgb'], alpha=0.85)
+    ax.set_xticks(x); ax.set_xticklabels(df_phase['ENSO_phase'])
+    ax.set_ylabel('RMSE'); ax.set_title('Forecast RMSE by ENSO Phase')
+    ax.legend()
+    for i, row in df_phase.iterrows():
+        ax.text(i - width, row['OLS_RMSE'] + 0.002, f"{row['OLS_RMSE']:.3f}", ha='center', fontsize=8)
+        ax.text(i, row['SARIMAX_RMSE'] + 0.002, f"{row['SARIMAX_RMSE']:.3f}", ha='center', fontsize=8)
+        ax.text(i + width, row['XGB_RMSE'] + 0.002, f"{row['XGB_RMSE']:.3f}", ha='center', fontsize=8)
+    fig.tight_layout()
+    fig.savefig(f"{FIG_DIR}/fig13_enso_phase_forecasting.png", dpi=150,
+                bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+    print('  ✓ Fig 13 saved')
+else:
+    print('  ⚠ Fig 13 skipped: prediction files unavailable')
+
+# ══════════════════════════════════════════════════════════════════════════════════
+# SUMMARY
+# ══════════════════════════════════════════════════════════════════════════════════
+figs_generated = [f for f in os.listdir(FIG_DIR) if f.endswith('.png')]
 print(f"\n✅ Notebook 10 complete.")
 print(f"   Figures saved in: {FIG_DIR}")
 print(f"   Total figures generated: {len(figs_generated)}")
@@ -520,5 +694,3 @@ for f in sorted(figs_generated):
     fpath = os.path.join(FIG_DIR, f)
     size_kb = os.path.getsize(fpath) / 1024
     print(f"   {f:<50} ({size_kb:.0f} KB)")
-print(f"\nNOTE: Figs 08, 09, 10, 11, 13 require prediction + SHAP outputs from NB05–09.")
-print(f"Re-run this notebook after executing notebooks 05–09 to generate all 13 figures.")

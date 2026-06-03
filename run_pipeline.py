@@ -36,7 +36,7 @@ STAGES = [
         "nb":   1,
         "file": "01_data_preprocessing.py",
         "desc": "Parse NASA POWER CSV → clean monthly panel (parquet)",
-        "input":  ["POWER_Point_Monthly_20050101_20251231_000d13N_117d50E_UTC.csv"],
+        "input":  ["data/nasa_power_monthly_bontang_2005_2025.csv"],
         "output": ["data/01_nasa_power_clean.parquet",
                    "data/01_data_quality_report.csv"],
     },
@@ -69,7 +69,7 @@ STAGES = [
     },
     {
         "nb":   5,
-        "file": "05_ols_hc3_model.py",
+        "file": "05_ols_hc3_baseline.py",
         "desc": "OLS-HC3 econometric baseline + diagnostics",
         "input":  ["data/03_model_ready.parquet",
                    "data/03_final_features.csv"],
@@ -87,7 +87,7 @@ STAGES = [
     },
     {
         "nb":   7,
-        "file": "07_xgboost_model.py",
+        "file": "07_xgboost_forecasting.py",
         "desc": "Constrained XGBoost + bootstrap PI",
         "input":  ["data/03_model_ready.parquet",
                    "data/03_final_features.csv"],
@@ -118,7 +118,7 @@ STAGES = [
     },
     {
         "nb":   10,
-        "file": "10_figure_generation.py",
+        "file": "10_publication_figures.py",
         "desc": "13 publication-ready figures (150 DPI)",
         "input":  ["data/03_model_ready.parquet"],
         "output": ["figures/fig01_research_framework.png",
@@ -154,10 +154,10 @@ class C:
     BOLD   = "\033[1m"
     RESET  = "\033[0m"
 
-def ok(msg):    return f"{C.GREEN}✓{C.RESET} {msg}"
-def warn(msg):  return f"{C.YELLOW}⚠{C.RESET} {msg}"
-def err(msg):   return f"{C.RED}✗{C.RESET} {msg}"
-def info(msg):  return f"{C.CYAN}→{C.RESET} {msg}"
+def ok(msg):    return f"[OK] {msg}"
+def warn(msg):  return f"[WARN] {msg}"
+def err(msg):   return f"[ERR] {msg}"
+def info(msg):  return f"[INFO] {msg}"
 
 
 # ── Cek dependensi input sebelum jalankan tahap ──────────────────────────────
@@ -258,7 +258,8 @@ def main():
     else:
         stages_to_run = [s for s in STAGES if s["nb"] >= args.from_nb]
 
-    print(f"  {info(f'Tahap yang akan dijalankan: {[s[\"nb\"] for s in stages_to_run]}')}")
+    stage_numbers = [s["nb"] for s in stages_to_run]
+    print(f"  {info(f'Tahap yang akan dijalankan: {stage_numbers}')}")
     if args.dry_run:
         print(f"  {warn('DRY-RUN: tidak ada yang akan dieksekusi')}\n")
 

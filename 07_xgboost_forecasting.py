@@ -3,7 +3,7 @@
 NOTEBOOK 07: XGBOOST MODEL
 =============================================================================
 Purpose  : Constrained XGBoost for monthly PV forecasting.
-           Deliberately conservative hyperparameters for n=240 training obs.
+           Deliberately conservative hyperparameters for n=240 training obs..
            Walk-forward evaluation with IDENTICAL splits as OLS/SARIMAX.
            Bootstrap prediction intervals.
 
@@ -29,12 +29,15 @@ import xgboost as xgb
 from sklearn.model_selection import ParameterGrid
 from sklearn.metrics import mean_squared_error
 import os, warnings
+from pathlib import Path
 warnings.filterwarnings("ignore")
 
 np.random.seed(42)
 
-DATA_DIR = "/home/claude/pv_research/data"
-OUT_DIR  = "/home/claude/pv_research/outputs"
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+OUT_DIR  = BASE_DIR / "outputs"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 df = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
 FINAL_FEATURES = pd.read_csv(f"{DATA_DIR}/03_final_features.csv")["feature"].tolist()

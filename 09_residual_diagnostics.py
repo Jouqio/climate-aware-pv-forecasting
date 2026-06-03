@@ -27,10 +27,13 @@ from scipy import stats
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.tsa.stattools import adfuller
 import warnings, os
+from pathlib import Path
 warnings.filterwarnings("ignore")
 
-DATA_DIR = "/home/claude/pv_research/data"
-OUT_DIR  = "/home/claude/pv_research/outputs"
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+OUT_DIR  = BASE_DIR / "outputs"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Load all predictions ───────────────────────────────────────────────────
 df_meta  = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")

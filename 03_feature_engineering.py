@@ -23,10 +23,13 @@ import pandas as pd
 import numpy as np
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import os, warnings
+from pathlib import Path
 warnings.filterwarnings("ignore")
 
-DATA_DIR  = "/home/claude/pv_research/data"
-OUT_DIR   = "/home/claude/pv_research/outputs"
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR  = BASE_DIR / "data"
+OUT_DIR   = BASE_DIR / "outputs"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 df = pd.read_parquet(f"{DATA_DIR}/02_target_reconstructed.parquet")
 print(f"Loaded: {df.shape[0]} × {df.shape[1]}")

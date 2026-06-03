@@ -20,13 +20,15 @@ import numpy as np
 from scipy import stats
 import statsmodels.api as sm
 import os, warnings
+from pathlib import Path
 warnings.filterwarnings("ignore")
 
 np.random.seed(42)   # Reproducibility — document seed in paper
 
-DATA_DIR   = "/home/claude/pv_research/data"
-OUT_DIR    = "/home/claude/pv_research/outputs"
-os.makedirs(OUT_DIR, exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR   = BASE_DIR / "data"
+OUT_DIR    = BASE_DIR / "outputs"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 df = pd.read_parquet(f"{DATA_DIR}/01_nasa_power_clean.parquet")
 print(f"Loaded: {df.shape[0]} monthly observations, {df.shape[1]} columns")

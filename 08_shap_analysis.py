@@ -24,10 +24,13 @@ import numpy as np
 import shap
 import pickle
 import os, warnings
+from pathlib import Path
 warnings.filterwarnings("ignore")
 
-DATA_DIR = "/home/claude/pv_research/data"
-OUT_DIR  = "/home/claude/pv_research/outputs"
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+OUT_DIR  = BASE_DIR / "outputs"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Load data and models
 df = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
