@@ -46,20 +46,6 @@ Period:
 
 January 2005 – December 2025
 ```
-
----
-
-## Target Journals
-
-| Journal                                | Quartile | IF (2024) | Priority     |
-| -------------------------------------- | -------- | --------- | ------------ |
-| Applied Energy                         | Q1       | ~11.0     | **Primary**  |
-| Renewable & Sustainable Energy Reviews | Q1       | ~16.0     | Alternative  |
-| Solar Energy                           | Q2       | ~5.0      | **Fallback** |
-| Energy Conversion & Management         | Q1       | ~9.9      | Alternative  |
-
----
-
 ---
 
 ## Keywords
