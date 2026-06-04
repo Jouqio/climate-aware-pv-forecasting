@@ -199,11 +199,11 @@ np.random.seed(42)  # → your seed
 ## Citation
 
 ```bibtex
-@article{[AuthorLastName]2025pvleakage,
+@article{Abdi2025pvleakage,
   title   = {Deterministic Target Leakage in Photovoltaic Forecasting:
              Correction, Forecastability Characterization, and ENSO-Conditioned
              Uncertainty for the Equatorial Maritime Continent},
-  author  = {[Author(s)]},
+  author  = {Abdi, Syauqi Nuzul},
   journal = {Energy AI},
   year    = {2025},
   doi     = {[DOI upon acceptance]},
