@@ -219,4 +219,4 @@ MIT License — see LICENSE file.
 
 ## Contact
 
-[Corresponding author name] | [email] | [institution]
+[Syauqi Nuzul Abdi] | [nuzulabdisyauqi@gmail.com] | [Stitek Bontang]
