@@ -1,4 +1,5 @@
-#  NEXT STEPS — ACTION CARD
+# NEXT STEPS — ACTION CARD
+
 ## What to do right now, in order
 
 ---
@@ -43,6 +44,7 @@ Open `PV_Leakage_Manuscript_Final.docx` and:
 3. Add actual figure captions (13 captions needed)
 4. Verify word count < 10,000 (Energy AI limit)
 5. Check journal formatting guidelines
+6. Confirm figure file names match the repository `figures/` outputs
 
 ---
 
@@ -51,12 +53,14 @@ Open `PV_Leakage_Manuscript_Final.docx` and:
 **Submission URL:** https://www.editorialmanager.com/eai/
 
 **Files to upload:**
+
 - `PV_Leakage_Manuscript_Final.docx` (main manuscript)
 - `PV_Leakage_Supplementary.docx` (Tables S1–S5)
 - 13 figure PNG files (300 DPI, listed below)
 - Cover letter (from document 24)
 
 **Figures for upload:**
+
 ```
 fig01_research_framework.png
 fig02_leakage_demonstration.png
@@ -78,16 +82,16 @@ figNEW_B_enso_violin.png            ← regenerate after ONI
 
 ## KEY NUMBERS TO KNOW BY HEART
 
-| Metric | Value | Where it appears |
-|---|---|---|
-| Leakage lower bound | **2.54×** | Abstract, §4.1 |
-| Leakage mean | 3.47× (CV=18.0%) | §4.1, Table 3 |
-| XGBoost mean SS | +0.085 | Abstract, §4.3 |
-| DM (XGB vs OLS) | p = 0.960 | Abstract, §4.3 |
-| GHI_anom p-value | < 0.001 | Abstract, §4.2 |
-| SARIMAX PICP | 0.935 | Abstract, §4.3 |
-| Winkler Score | 0.386 kWh/m²/day | §4.3, Table 5 |
-| KW ENSO test | p > 0.65 | Abstract, §4.4 |
+| Metric              | Value            | Where it appears |
+| ------------------- | ---------------- | ---------------- |
+| Leakage lower bound | **2.54×**        | Abstract, §4.1   |
+| Leakage mean        | 3.47× (CV=18.0%) | §4.1, Table 3    |
+| XGBoost mean SS     | +0.085           | Abstract, §4.3   |
+| DM (XGB vs OLS)     | p = 0.960        | Abstract, §4.3   |
+| GHI_anom p-value    | < 0.001          | Abstract, §4.2   |
+| SARIMAX PICP        | 0.935            | Abstract, §4.3   |
+| Winkler Score       | 0.386 kWh/m²/day | §4.3, Table 5    |
+| KW ENSO test        | p > 0.65         | Abstract, §4.4   |
 
 ---
 
@@ -104,24 +108,24 @@ Last resort → **Energies (MDPI)**, ~60% acceptance, open access.
 
 ## ALL DELIVERABLE FILES (28 documents produced)
 
-| File | Content |
-|---|---|
-| **PV_Leakage_Manuscript_Final.docx** | Complete submission manuscript |
-| **PV_Leakage_Supplementary.docx** | Tables S1–S5 |
-| 19_complete_manuscript.md | Markdown source |
-| 25_final_integrated_manuscript.md | Integrated with all corrections |
-| 24_cover_letter_and_response.md | Cover letter + reviewer response |
-| 26_github_readme.md | Repository README |
-| 27_oni_integration_complete.py | ONI integration code |
-| 20_peer_review_simulation.md | 5-reviewer simulation |
-| 21_final_revision_guide.md | Exact text changes |
-| 22_execution_roadmap.md | Implementation steps |
-| 28_project_summary.md | Complete journey summary |
-| NB01–NB10 | Python pipeline notebooks |
+| File                                                                   | Content                          |
+| ---------------------------------------------------------------------- | -------------------------------- |
+| **PV_Leakage_Manuscript_Final.docx**                                   | Complete submission manuscript   |
+| **PV_Leakage_Supplementary.docx**                                      | Tables S1–S5                     |
+| 19_complete_manuscript.md                                              | Markdown source                  |
+| 25_final_integrated_manuscript.md                                      | Integrated with all corrections  |
+| 24_cover_letter_and_response.md                                        | Cover letter + reviewer response |
+| README.md                                                              | Repository README                |
+| LICENSE                                                                | Project license                  |
+| 27_oni_integration_complete.py                                         | ONI integration code             |
+| 20_peer_review_simulation.md                                           | 5-reviewer simulation            |
+| 21_final_revision_guide.md                                             | Exact text changes               |
+| 22_execution_roadmap.md                                                | Implementation steps             |
+| 28_project_summary.md                                                  | Complete journey summary         |
+| notebooks/01_data_preprocessing.py … notebooks/10_figure_generation.py | Python pipeline notebooks        |
 
 ---
 
 **Estimated time from now to journal submission: 1–2 days of focused work.**
 **Estimated time to first decision: 6–12 weeks.**
 **Estimated acceptance probability (Energy AI): 50–56%.**
-

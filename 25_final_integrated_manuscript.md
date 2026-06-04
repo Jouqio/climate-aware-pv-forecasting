@@ -1,5 +1,7 @@
 # Deterministic Target Leakage in Photovoltaic Forecasting:
+
 # Correction, Forecastability Characterization, and ENSO-Conditioned
+
 # Uncertainty for the Equatorial Maritime Continent
 
 **Status:** SUBMISSION-READY (pending real ONI integration for Solar Energy)
@@ -16,8 +18,8 @@
 A structurally underexamined failure mode in photovoltaic (PV) forecasting is
 the construction of target variables as deterministic functions of predictor
 variables — generating algebraic circularity that inflates apparent R² to
-near-unity without forecasting content. We term this *deterministic target
-leakage* and provide its first empirical quantification using a 21-year NASA
+near-unity without forecasting content. We term this _deterministic target
+leakage_ and provide its first empirical quantification using a 21-year NASA
 POWER monthly dataset for Bontang, East Kalimantan, Indonesia (n = 252,
 January 2005 – December 2025). Under standard deterministic target construction,
 OLS regression yields R² = 0.9999. Upon stochastic target reconstruction
@@ -77,7 +79,7 @@ variable construction methodology.
 
 A common but underexamined practice is the construction of target variables as
 deterministic functions of predictor variables — a structural circularity we term
-*deterministic target leakage*. The canonical construction is:
+_deterministic target leakage_. The canonical construction is:
 
 > Y_PV = η × A_ref × GHI × (1 − β_T × (T_2m − T_ref)) ... (1)
 
@@ -123,9 +125,11 @@ reporting of statistical limitations (KW p > 0.65, n = 24 El Niño test months).
 concordantly (OLS p < 0.001; SHAP rank 1 in all configurations), resolving
 apparent discordance attributable to multicollinearity, not model differences.
 
-**(C5) Reproducibility:** Python pipeline (GitHub) enabling replication at any
-NASA POWER location globally, with documented random seed and 15-scenario
-sensitivity reporting.
+**(C5) Reproducibility:** Python pipeline (GitHub) implemented in
+`notebooks/01_data_preprocessing.py` through `notebooks/10_figure_generation.py`
+and orchestrated by `run_pipeline.py`, enabling replication at any NASA POWER
+location globally with documented random seed and 15-scenario sensitivity
+reporting.
 
 ---
 
@@ -152,15 +156,15 @@ ground-based measurements with reported MAE of 12–18 W/m² [20,21].
 
 **Table 1: Key Dataset Variables (2005–2025, n = 252)**
 
-| Variable | Mean | SD | Min | Max | Unit |
-|---|---|---|---|---|---|
-| GHI | 4.865 | 0.407 | 4.014 | 6.076 | kWh/m²/day |
-| DNI | 3.183 | 0.526 | 1.754 | 5.183 | kWh/m²/day |
-| Cloud amount | 79.90 | 9.72 | 49.09 | 96.92 | % |
-| Temperature (T_2m) | 26.92 | 0.44 | 25.85 | 28.33 | °C |
-| Relative humidity | 84.64 | 1.51 | 77.81 | 87.69 | % |
-| Precipitation | 7.70 | 3.43 | 0.35 | 19.11 | mm/day |
-| Clearness index | 0.497 | 0.042 | 0.383 | 0.598 | — |
+| Variable           | Mean  | SD    | Min   | Max   | Unit       |
+| ------------------ | ----- | ----- | ----- | ----- | ---------- |
+| GHI                | 4.865 | 0.407 | 4.014 | 6.076 | kWh/m²/day |
+| DNI                | 3.183 | 0.526 | 1.754 | 5.183 | kWh/m²/day |
+| Cloud amount       | 79.90 | 9.72  | 49.09 | 96.92 | %          |
+| Temperature (T_2m) | 26.92 | 0.44  | 25.85 | 28.33 | °C         |
+| Relative humidity  | 84.64 | 1.51  | 77.81 | 87.69 | %          |
+| Precipitation      | 7.70  | 3.43  | 0.35  | 19.11 | mm/day     |
+| Clearness index    | 0.497 | 0.042 | 0.383 | 0.598 | —          |
 
 Mean cloud fraction of **79.9%** represents one of the highest sustained cloud
 loadings in the PV forecasting literature, making this site a stringent test
@@ -193,15 +197,15 @@ reports robustness across five seeds and three PR_base values.
 
 **Table 2: Loss Component Distributions and Parameterisation**
 
-| Component | Distribution | Physical basis |
-|---|---|---|
-| L_thermal | N(β_T × max(0, T−25), σ_T) | Manufacturer temperature derating [23] |
-| L_cloud_resid | TN(0.02+0.08×cloud%, σ_C) | Sub-monthly cloud intermittency [24] |
-| L_aerosol | Γ(k, θ); k=2+1.5×I_fire | Maritime + peatland aerosol [25] |
-| L_humidity | N(0.005+0.025×RH_norm, 0.006) | Tropical soiling [26] |
-| L_inverter | Beta(2, 15) | Inverter efficiency and aging [27] |
-| L_monsoon | N(0, σ_seasonal) | ITCZ-related variability |
-| L_ENSO | N(0, σ ∝|ONI|) | ENSO-cloud coupling |
+| Component     | Distribution                  | Physical basis                         |
+| ------------- | ----------------------------- | -------------------------------------- | --- | ------------------- |
+| L_thermal     | N(β_T × max(0, T−25), σ_T)    | Manufacturer temperature derating [23] |
+| L_cloud_resid | TN(0.02+0.08×cloud%, σ_C)     | Sub-monthly cloud intermittency [24]   |
+| L_aerosol     | Γ(k, θ); k=2+1.5×I_fire       | Maritime + peatland aerosol [25]       |
+| L_humidity    | N(0.005+0.025×RH_norm, 0.006) | Tropical soiling [26]                  |
+| L_inverter    | Beta(2, 15)                   | Inverter efficiency and aging [27]     |
+| L_monsoon     | N(0, σ_seasonal)              | ITCZ-related variability               |
+| L_ENSO        | N(0, σ ∝                      | ONI                                    | )   | ENSO-cloud coupling |
 
 I_fire = 1 for Aug–Oct with PRECTOT < 3 mm/day (peatland fire proxy [28]).
 
@@ -209,18 +213,18 @@ I_fire = 1 for Aug–Oct with PRECTOT < 3 mm/day (peatland fire proxy [28]).
 
 **Table 3: Final Feature Set with VIF Diagnostics (n = 240)**
 
-| Feature | Physical rationale | VIF | Used in |
-|---|---|---|---|
-| sin_month | Seasonal encoding | 2.51 | OLS + XGB |
-| cos_month | Seasonal encoding | 2.44 | OLS + XGB |
-| GHI_anom | Interannual irradiance signal | 16.2† | OLS + XGB |
-| CLOUD_anom | Interannual cloud anomaly | 4.83 | OLS + XGB |
-| PRECTOT_anom | Monsoon variability | 1.60 | OLS + XGB |
-| ONI | ENSO primary index | 10.20 | OLS + XGB |
-| ONI_lag2 | 2-month teleconnection lag | 9.59 | OLS + XGB |
-| GHI_lag1 | 1-month persistence | 3.87 | OLS + XGB |
-| GHI_x_CLOUD | Cloud-irradiance interaction | 2,927‡ | XGB only |
-| T2M_x_RH | Thermal-humidity stress | 2,070‡ | XGB only |
+| Feature      | Physical rationale            | VIF    | Used in   |
+| ------------ | ----------------------------- | ------ | --------- |
+| sin_month    | Seasonal encoding             | 2.51   | OLS + XGB |
+| cos_month    | Seasonal encoding             | 2.44   | OLS + XGB |
+| GHI_anom     | Interannual irradiance signal | 16.2†  | OLS + XGB |
+| CLOUD_anom   | Interannual cloud anomaly     | 4.83   | OLS + XGB |
+| PRECTOT_anom | Monsoon variability           | 1.60   | OLS + XGB |
+| ONI          | ENSO primary index            | 10.20  | OLS + XGB |
+| ONI_lag2     | 2-month teleconnection lag    | 9.59   | OLS + XGB |
+| GHI_lag1     | 1-month persistence           | 3.87   | OLS + XGB |
+| GHI_x_CLOUD  | Cloud-irradiance interaction  | 2,927‡ | XGB only  |
+| T2M_x_RH     | Thermal-humidity stress       | 2,070‡ | XGB only  |
 
 †GHI_anom VIF = 16.2: retained in OLS; bootstrap SE verification confirms
 HC3 SE stable (ratio = 0.988 < 1.10 threshold; see §4.2). ‡Excluded from
@@ -284,14 +288,14 @@ fold-9 (n_train = 204). GHI_anom ranked first in all three configurations
 
 **Table 4: Deterministic Leakage Demonstration and Sensitivity Analysis**
 
-| Scenario | R²_det | R²_stoch | Leakage ratio |
-|---|---|---|---|
-| Reference (seed=42, PR=0.80) | 0.9999 | 0.226 | 4.42× |
-| Sensitivity mean (n=15) | 0.9999 | 0.289 | **3.47×** |
-| Sensitivity SD | — | 0.062 | 0.65 |
-| CV | — | — | **18.0%** |
-| **Lower bound** (seed=789, PR=0.85) | 0.9999 | 0.395 | **2.54×** |
-| Upper bound (seed=42, PR=0.75) | 0.9999 | 0.211 | 4.74× |
+| Scenario                            | R²_det | R²_stoch | Leakage ratio |
+| ----------------------------------- | ------ | -------- | ------------- |
+| Reference (seed=42, PR=0.80)        | 0.9999 | 0.226    | 4.42×         |
+| Sensitivity mean (n=15)             | 0.9999 | 0.289    | **3.47×**     |
+| Sensitivity SD                      | —      | 0.062    | 0.65          |
+| CV                                  | —      | —        | **18.0%**     |
+| **Lower bound** (seed=789, PR=0.85) | 0.9999 | 0.395    | **2.54×**     |
+| Upper bound (seed=42, PR=0.75)      | 0.9999 | 0.211    | 4.74×         |
 
 Under deterministic target construction (Equation 1), OLS of Y_det on GHI and
 T_2m yields **R² = 0.9999** (RMSE = 0.000127 kWh/m²/day; Figure 2, left panel).
@@ -311,17 +315,17 @@ parameterisation tested.
 
 **Table 5: OLS-HC3 Coefficient Estimates (n = 240)**
 
-| Feature | β | HC3-SE | t | p | Sig |
-|---|---|---|---|---|---|
-| Constant | +0.394 | 0.042 | 9.314 | < 0.001 | *** |
-| GHI_anom | +0.088 | 0.024 | 3.636 | 0.0003 | *** |
-| GHI_lag1 | +0.028 | 0.014 | 2.082 | 0.038 | * |
-| sin_month | −0.034 | 0.004 | −8.696 | < 0.001 | *** |
-| cos_month | −0.049 | 0.005 | −10.647 | < 0.001 | *** |
-| CLOUD_anom | −0.0004 | 0.0009 | −0.466 | 0.642 | — |
-| PRECTOT_anom | −0.0001 | 0.0006 | −0.219 | 0.827 | — |
-| ONI | −0.031 | 0.020 | −1.572 | 0.117 | — |
-| ONI_lag2 | −0.003 | 0.016 | −0.213 | 0.832 | — |
+| Feature      | β       | HC3-SE | t       | p       | Sig    |
+| ------------ | ------- | ------ | ------- | ------- | ------ |
+| Constant     | +0.394  | 0.042  | 9.314   | < 0.001 | \*\*\* |
+| GHI_anom     | +0.088  | 0.024  | 3.636   | 0.0003  | \*\*\* |
+| GHI_lag1     | +0.028  | 0.014  | 2.082   | 0.038   | \*     |
+| sin_month    | −0.034  | 0.004  | −8.696  | < 0.001 | \*\*\* |
+| cos_month    | −0.049  | 0.005  | −10.647 | < 0.001 | \*\*\* |
+| CLOUD_anom   | −0.0004 | 0.0009 | −0.466  | 0.642   | —      |
+| PRECTOT_anom | −0.0001 | 0.0006 | −0.219  | 0.827   | —      |
+| ONI          | −0.031  | 0.020  | −1.572  | 0.117   | —      |
+| ONI_lag2     | −0.003  | 0.016  | −0.213  | 0.832   | —      |
 
 R² = 0.237; Adj-R² = 0.211; AIC = −622.4; BIC = −591.1; n = 240.
 
@@ -350,18 +354,18 @@ and the expanding-window training scheme.
 
 **Table 6: Walk-Forward Performance — All Models vs Per-Fold Climatological Baseline**
 
-| Fold | Year | n_tr | Clim RMSE | OLS SS | XGB SS | SARX SS | PICP | Winkler |
-|---|---|---|---|---|---|---|---|---|
-| 1 | 2015 | 108 | 0.0922 | +0.12 | **+0.34** | +0.24 | 0.833 | 0.703 |
-| 2 | 2016 | 120 | 0.0668 | +0.26 | +0.09 | −0.10 | 1.000 | 0.287 |
-| 3 | 2017 | 132 | 0.0656 | +0.10 | +0.08 | +0.02 | 1.000 | 0.284 |
-| 4 | 2018 | 144 | 0.0613 | +0.10 | +0.06 | +0.07 | 1.000 | 0.281 |
-| 5 | 2019 | 156 | 0.0883 | **+0.37** | **+0.37** | +0.16 | 0.750 | 0.483 |
-| 6 | 2020 | 168 | 0.0745 | +0.31 | +0.21 | +0.09 | 0.917 | 0.312 |
-| 7 | 2021 | 180 | 0.0794 | +0.18 | +0.23 | +0.07 | 0.917 | 0.552 |
-| 8 | 2022 | 192 | 0.0609 | −0.20 | −0.35 | −0.17 | 1.000 | 0.288 |
-| 9 | 2023 | 204 | 0.0483 | −0.95 | −0.26 | −0.65 | 1.000 | 0.285 |
-| **Mean** | | | **0.0708** | **+0.033** | **+0.085** | **−0.030** | **0.935** | **0.386** |
+| Fold     | Year | n_tr | Clim RMSE  | OLS SS     | XGB SS     | SARX SS    | PICP      | Winkler   |
+| -------- | ---- | ---- | ---------- | ---------- | ---------- | ---------- | --------- | --------- |
+| 1        | 2015 | 108  | 0.0922     | +0.12      | **+0.34**  | +0.24      | 0.833     | 0.703     |
+| 2        | 2016 | 120  | 0.0668     | +0.26      | +0.09      | −0.10      | 1.000     | 0.287     |
+| 3        | 2017 | 132  | 0.0656     | +0.10      | +0.08      | +0.02      | 1.000     | 0.284     |
+| 4        | 2018 | 144  | 0.0613     | +0.10      | +0.06      | +0.07      | 1.000     | 0.281     |
+| 5        | 2019 | 156  | 0.0883     | **+0.37**  | **+0.37**  | +0.16      | 0.750     | 0.483     |
+| 6        | 2020 | 168  | 0.0745     | +0.31      | +0.21      | +0.09      | 0.917     | 0.312     |
+| 7        | 2021 | 180  | 0.0794     | +0.18      | +0.23      | +0.07      | 0.917     | 0.552     |
+| 8        | 2022 | 192  | 0.0609     | −0.20      | −0.35      | −0.17      | 1.000     | 0.288     |
+| 9        | 2023 | 204  | 0.0483     | −0.95      | −0.26      | −0.65      | 1.000     | 0.285     |
+| **Mean** |      |      | **0.0708** | **+0.033** | **+0.085** | **−0.030** | **0.935** | **0.386** |
 
 XGBoost achieved the lowest aggregate RMSE (0.0625 kWh/m²/day, mean SS = +0.085)
 and exceeded the per-fold baseline in 7 of 9 folds. OLS-HC3 achieved aggregate
@@ -397,11 +401,11 @@ operational noise dominates and models face a stringent comparator.
 
 **Table 7: ENSO-Phase Conditional RMSE and Statistical Tests**
 
-| Model | El Niño (n=24) | Neutral (n=51) | La Niña (n=33) | KW H | KW p |
-|---|---|---|---|---|---|
-| OLS-HC3 | 0.0725 | 0.0641 | 0.0711 | 0.180 | 0.913 |
-| XGBoost | 0.0660 | 0.0638 | 0.0725 | 0.143 | 0.931 |
-| SARIMAX | **0.0831** | 0.0724 | 0.0705 | **0.806** | **0.668** |
+| Model   | El Niño (n=24) | Neutral (n=51) | La Niña (n=33) | KW H      | KW p      |
+| ------- | -------------- | -------------- | -------------- | --------- | --------- |
+| OLS-HC3 | 0.0725         | 0.0641         | 0.0711         | 0.180     | 0.913     |
+| XGBoost | 0.0660         | 0.0638         | 0.0725         | 0.143     | 0.931     |
+| SARIMAX | **0.0831**     | 0.0724         | 0.0705         | **0.806** | **0.668** |
 
 ENSO-phase stratification revealed a **directional but statistically non-significant**
 pattern (Table 7). SARIMAX exhibited the highest RMSE during El Niño periods
@@ -609,6 +613,9 @@ conformal prediction intervals for XGBoost.
 
 The complete pipeline is available at:
 https://github.com/Jouqio/climate-aware-pv-forecasting.git
+Pipeline scripts are located in `notebooks/01_data_preprocessing.py` through
+`notebooks/10_figure_generation.py`, and the analysis workflow is documented in
+`README.md`.
 
 ---
 
@@ -663,4 +670,3 @@ https://github.com/Jouqio/climate-aware-pv-forecasting.git
 **Word count:** ~8,400 words (body text, excluding tables and references)
 **Figures:** 13 (Figs 01–12 + NEW-A + NEW-B; Fig 13 replaced by NEW-B)
 **Tables:** 7 main + 3 supplementary
-
