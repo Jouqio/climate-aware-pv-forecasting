@@ -34,7 +34,7 @@ LOG_DIR   = BASE_DIR / "logs"
 STAGES = [
     {
         "nb":   1,
-        "file": "01_data_preprocessing.py",
+        "file": "notebooks/01_data_preprocessing.py",
         "desc": "Parse NASA POWER CSV → clean monthly panel (parquet)",
         "input":  ["data/nasa_power_monthly_bontang_2005_2025.csv"],
         "output": ["data/01_nasa_power_clean.parquet",
@@ -42,7 +42,7 @@ STAGES = [
     },
     {
         "nb":   2,
-        "file": "02_target_reconstruction.py",
+        "file": "notebooks/02_target_reconstruction.py",
         "desc": "Stochastic PV target + leakage demonstration",
         "input":  ["data/01_nasa_power_clean.parquet"],
         "output": ["data/02_target_reconstructed.parquet",
@@ -51,7 +51,7 @@ STAGES = [
     },
     {
         "nb":   3,
-        "file": "03_feature_engineering.py",
+        "file": "notebooks/03_feature_engineering.py",
         "desc": "12-feature leakage-safe set + ONI/DMI + VIF",
         "input":  ["data/02_target_reconstructed.parquet"],
         "output": ["data/03_model_ready.parquet",
@@ -61,7 +61,7 @@ STAGES = [
     },
     {
         "nb":   4,
-        "file": "04_validation_framework.py",
+        "file": "notebooks/04_validation_framework.py",
         "desc": "Walk-forward splits + evaluation metrics",
         "input":  ["data/03_model_ready.parquet",
                    "data/03_final_features.csv"],
@@ -69,7 +69,7 @@ STAGES = [
     },
     {
         "nb":   5,
-        "file": "05_ols_hc3_baseline.py",
+        "file": "notebooks/05_ols_hc3_model.py",
         "desc": "OLS-HC3 econometric baseline + diagnostics",
         "input":  ["data/03_model_ready.parquet",
                    "data/03_final_features.csv"],
@@ -79,7 +79,7 @@ STAGES = [
     },
     {
         "nb":   6,
-        "file": "06_sarimax_climate_model.py",
+        "file": "notebooks/06_sarimax_climate_model.py",
         "desc": "SARIMAX+ONI with AIC grid search",
         "input":  ["data/03_model_ready.parquet"],
         "output": ["outputs/06_sarimax_walkforward_results.csv",
@@ -87,7 +87,7 @@ STAGES = [
     },
     {
         "nb":   7,
-        "file": "07_xgboost_forecasting.py",
+        "file": "notebooks/07_xgboost_model.py",
         "desc": "Constrained XGBoost + bootstrap PI",
         "input":  ["data/03_model_ready.parquet",
                    "data/03_final_features.csv"],
@@ -97,7 +97,7 @@ STAGES = [
     },
     {
         "nb":   8,
-        "file": "08_shap_analysis.py",
+        "file": "notebooks/08_shap_analysis.py",
         "desc": "SHAP TreeExplainer + OLS-SHAP correspondence",
         "input":  ["data/07_xgboost_full_model.pkl",
                    "data/03_model_ready.parquet",
@@ -107,7 +107,7 @@ STAGES = [
     },
     {
         "nb":   9,
-        "file": "09_residual_diagnostics.py",
+        "file": "notebooks/09_residual_diagnostics.py",
         "desc": "Cross-model DM/Friedman test + ENSO-residual linkage",
         "input":  ["data/05_ols_predictions.parquet",
                    "data/06_sarimax_predictions.parquet",
@@ -118,7 +118,7 @@ STAGES = [
     },
     {
         "nb":   10,
-        "file": "10_publication_figures.py",
+        "file": "notebooks/10_figure_generation.py",
         "desc": "13 publication-ready figures (150 DPI)",
         "input":  ["data/03_model_ready.parquet"],
         "output": ["figures/fig01_research_framework.png",
