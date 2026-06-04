@@ -1,5 +1,7 @@
 # Climate-Aware Stochastic PV Forecasting
+
 ## Deterministic Leakage Correction + Forecastability Characterization
+
 ### Equatorial Maritime Continent | Bontang, Kalimantan Timur, Indonesia
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
@@ -65,6 +67,7 @@ pip install -r requirements.txt
 ```
 
 **requirements.txt:**
+
 ```
 pandas>=1.5.0
 numpy>=1.23.0
@@ -134,25 +137,25 @@ python3 run_pipeline.py --only 2
 
 ## Key Results (Synthetic ONI; update after NOAA integration)
 
-| Metric | Value | Notes |
-|---|---|---|
-| R²_det (deterministic) | 0.9999 | Algebraic identity — invalid |
-| R²_stoch (corrected) | 0.226 | Genuine forecasting benchmark |
-| Leakage ratio (mean) | **3.47×** | CV = 18.0%, n = 15 scenarios |
-| Leakage lower bound | **2.54×** | Conservative claim, all scenarios |
-| OLS AIC / BIC | −622.4 / −591.1 | Low-VIF specification |
-| GHI_anom β | +0.088 (p < 0.001) | Dominant OLS driver |
-| Bootstrap SE ratio | 0.988 | VIF=16.2 stable (ratio < 1.10) |
-| XGBoost mean SS | +0.085 | 7/9 folds, Wilcoxon p=0.102 |
-| OLS mean SS | +0.033 | 7/9 folds, statistically equivalent |
-| DM test (XGB vs OLS) | p = 0.960 | Statistically equivalent |
-| Friedman test | χ²=2.889, p=0.236 | No ranking hierarchy |
-| SARIMAX PICP (95%) | 0.935 | Near-nominal |
-| SARIMAX Winkler | 0.386 kWh/m²/day | Calibration metric |
-| MA(1) coefficient | θ₁=0.057 (p=0.373) | Marginal; retained for PI |
-| Chow break (2015) | F=1.183, p=0.307 | No structural break |
-| El Niño RMSE premium | +14.8% (SARIMAX) | KW p=0.668 — directional only |
-| GHI_anom SHAP rank | 1/12 (all configs) | Stable across fold sizes |
+| Metric                 | Value              | Notes                               |
+| ---------------------- | ------------------ | ----------------------------------- |
+| R²_det (deterministic) | 0.9999             | Algebraic identity — invalid        |
+| R²_stoch (corrected)   | 0.226              | Genuine forecasting benchmark       |
+| Leakage ratio (mean)   | **3.47×**          | CV = 18.0%, n = 15 scenarios        |
+| Leakage lower bound    | **2.54×**          | Conservative claim, all scenarios   |
+| OLS AIC / BIC          | −622.4 / −591.1    | Low-VIF specification               |
+| GHI_anom β             | +0.088 (p < 0.001) | Dominant OLS driver                 |
+| Bootstrap SE ratio     | 0.988              | VIF=16.2 stable (ratio < 1.10)      |
+| XGBoost mean SS        | +0.085             | 7/9 folds, Wilcoxon p=0.102         |
+| OLS mean SS            | +0.033             | 7/9 folds, statistically equivalent |
+| DM test (XGB vs OLS)   | p = 0.960          | Statistically equivalent            |
+| Friedman test          | χ²=2.889, p=0.236  | No ranking hierarchy                |
+| SARIMAX PICP (95%)     | 0.935              | Near-nominal                        |
+| SARIMAX Winkler        | 0.386 kWh/m²/day   | Calibration metric                  |
+| MA(1) coefficient      | θ₁=0.057 (p=0.373) | Marginal; retained for PI           |
+| Chow break (2015)      | F=1.183, p=0.307   | No structural break                 |
+| El Niño RMSE premium   | +14.8% (SARIMAX)   | KW p=0.668 — directional only       |
+| GHI_anom SHAP rank     | 1/12 (all configs) | Stable across fold sizes            |
 
 ---
 
@@ -161,11 +164,13 @@ python3 run_pipeline.py --only 2
 All stochastic simulations use `np.random.seed(42)`.
 
 For leakage ratio robustness, sensitivity analysis was run across:
+
 - **5 seeds:** 42, 123, 456, 789, 1000
 - **3 PR_base values:** 0.75, 0.80, 0.85
 - **Result:** mean = 3.47×, CV = 18.0%, range [2.54, 4.74]
 
 To replicate with a different seed:
+
 ```python
 # In 02_target_reconstruction.py, change:
 np.random.seed(42)  # → your seed
@@ -175,24 +180,33 @@ np.random.seed(42)  # → your seed
 
 ## Data Sources
 
-| Data | Source | Access | Notes |
-|---|---|---|---|
-| NASA POWER GHI, T2M, cloud, precip | [power.larc.nasa.gov](https://power.larc.nasa.gov) | Public, free | v8.4.1, MERRA-2 |
-| NOAA CPC ONI (official) | [cpc.noaa.gov/data/indices](https://www.cpc.noaa.gov/data/indices/) | Public, free | ERSSTv5 Niño 3.4 |
-| NOAA CPC DMI (future) | [psl.noaa.gov](https://psl.noaa.gov/gcos_wgsp/Timeseries/DMI/) | Public, free | Indian Ocean Dipole |
+| Data                               | Source                                                              | Access       | Notes               |
+| ---------------------------------- | ------------------------------------------------------------------- | ------------ | ------------------- |
+| NASA POWER GHI, T2M, cloud, precip | [power.larc.nasa.gov](https://power.larc.nasa.gov)                  | Public, free | v8.4.1, MERRA-2     |
+| NOAA CPC ONI (official)            | [cpc.noaa.gov/data/indices](https://www.cpc.noaa.gov/data/indices/) | Public, free | ERSSTv5 Niño 3.4    |
+| NOAA CPC DMI (future)              | [psl.noaa.gov](https://psl.noaa.gov/gcos_wgsp/Timeseries/DMI/)      | Public, free | Indian Ocean Dipole |
 
 ---
 
 ## Figure Gallery
 
-| Figure | Description |
-|---|---|
-| fig02_leakage_demonstration | R² = 0.9999 vs 0.226 (core finding) |
-| figNEW_A_sensitivity_heatmap | Leakage ratio across 15 parameterisation scenarios |
-| fig08_model_performance | Walk-forward RMSE and skill scores per fold |
-| figNEW_B_enso_violin | ENSO-phase error distributions + KW annotation |
-| fig05_enso_teleconnection | ONI vs GHI anomaly scatter + cross-correlation |
-| fig12_residual_diagnostics | ACF/PACF/Q-Q/residual-fitted panel |
+| Figure                               | Description                                                |
+| ------------------------------------ | ---------------------------------------------------------- |
+| fig01_research_framework             | Conceptual research framework and pipeline overview        |
+| fig02_leakage_demonstration          | R² = 0.9999 vs 0.226 (core finding)                        |
+| fig03_data_profile                   | Dataset profile and preprocessing summary                  |
+| fig04_seasonal_climatology           | Seasonal climatology and monthly anomaly patterns          |
+| fig05_enso_teleconnection            | ONI vs GHI anomaly scatter + cross-correlation             |
+| fig06_stochastic_target_architecture | Stochastic target architecture and loss decomposition      |
+| fig07_walkforward_scheme             | Walk-forward validation design and fold structure          |
+| fig08_model_performance              | Walk-forward RMSE and skill scores per fold                |
+| fig09_sarimax_prediction_intervals   | SARIMAX probabilistic prediction intervals and calibration |
+| fig10_shap_summary                   | SHAP summary and feature attribution patterns              |
+| fig11_ols_xai_correspondence         | OLS and SHAP correspondence in feature importance          |
+| fig12_residual_diagnostics           | ACF/PACF/Q-Q/residual-fitted panel                         |
+| fig13_enso_phase_forecasting         | ENSO-phase forecast performance and RMSE premium           |
+| figNEW_A_sensitivity_heatmap         | Leakage ratio across 15 parameterisation scenarios         |
+| figNEW_B_enso_violin                 | ENSO-phase error distributions + KW annotation             |
 
 ---
 
