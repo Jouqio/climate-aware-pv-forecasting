@@ -234,12 +234,3 @@ MIT License — see LICENSE file.
 ## Contact
 
 Syauqi Nuzul Abdi | nuzulabdisyauqi@gmail.com | Stitek Bontang
-
----
-
-<p align="center">
-  <img src="https://img.shields.io/github/stars/Jouqio/stochastic-pv-equatorial-kalimantan?style=social" alt="Stars">
-  <img src="https://img.shields.io/github/forks/Jouqio/stochastic-pv-equatorial-kalimantan?style=social" alt="Forks">
-  <br><br>
-</p>
-
