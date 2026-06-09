@@ -1,5 +1,5 @@
 # FINAL PROJECT SUMMARY
-## Climate-Aware Stochastic PV Forecasting — Complete Journey
+## Climate-Aware Stochastic PV Forecasting — Complete JourneyS
 ## Bontang, East Kalimantan, Indonesia | NASA POWER 2005–2025
 
 ---
