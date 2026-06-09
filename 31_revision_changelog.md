@@ -1,5 +1,5 @@
 # REVISION CHANGELOG
-## Tracking all changes from Original → Revised Manuscript
+## Tracking all changes from Original → Revised Manuscripts
 
 **Original:** PV_Leakage_Manuscript_Final.docx
 **Revised:**  PV_Leakage_REVISED_FINAL.docx
