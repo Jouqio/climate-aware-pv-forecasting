@@ -1,4 +1,4 @@
-# ⚡ NEXT STEPS — ACTION CARD
+#  NEXT STEPS — ACTION CARD
 ## What to do right now, in order
 
 ---
