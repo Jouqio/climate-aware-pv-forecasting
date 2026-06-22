@@ -23,7 +23,7 @@ import pandas as pd
 import numpy as np
 import shap
 import pickle
-import os, warnings
+import os, sys, warnings
 from pathlib import Path
 warnings.filterwarnings("ignore")
 
@@ -31,11 +31,14 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 OUT_DIR  = BASE_DIR / "outputs"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(BASE_DIR.parent))  # utils.py lives at repo root, one level above notebooks/
+from utils import expanding_climatology  # noqa: E402
 
 # Load data and models
 df = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
 FINAL_FEATURES = pd.read_csv(f"{DATA_DIR}/03_final_features.csv")["feature"].tolist()
 TARGET = "Y_stoch"
+RAW_ANOMALY_SOURCE_COLS = ["GHI", "CLOUD", "PRECTOT", "T2M"]
 
 with open(f"{DATA_DIR}/07_xgboost_full_model.pkl", "rb") as f:
     xgb_model = pickle.load(f)
@@ -45,6 +48,19 @@ ols_coef = ols_coef[ols_coef["Feature"] != "const"].copy()
 
 # Use 2005-2023 for SHAP (full training data)
 df_analysis = df[df["YEAR"] <= 2023].copy()
+
+# Q1 AUDIT FIX: recompute anomaly-derived features using ONLY 2005-2023
+# climatology (excludes the 2024-2025 holdout) — MUST exactly match how
+# notebooks/07_xgboost_model.py Part C built `full_train` for the
+# pickled xgb_model loaded above. Using a different anomaly computation
+# here than what the model was actually trained on would make every
+# SHAP value in this notebook attributed to features the model never
+# saw in that form — a silent train/explain mismatch, not technically
+# "leakage" but a serious correctness bug in its own right.
+for col in RAW_ANOMALY_SOURCE_COLS:
+    df_analysis[f"{col}_anom"] = df_analysis[col] - df_analysis.groupby("MONTH")[col].transform("mean")
+df_analysis["ONI_x_CLOUD_anom"] = df_analysis["ONI"] * df_analysis["CLOUD_anom"]
+
 X_analysis  = df_analysis[FINAL_FEATURES]
 
 print(f"SHAP analysis on {len(df_analysis)} observations")
@@ -258,6 +274,95 @@ if cloud_feature_idx is not None and oni_feature_idx is not None:
             print(f"  → CLOUD effect differs by ENSO phase → nonlinear ENSO-cloud interaction confirmed")
         else:
             print(f"  → CLOUD effect similar across ENSO phases → additive model sufficient")
+
+# ══════════════════════════════════════════════════════════════════════════
+# CROSS-FOLD SHAP STABILITY CHECK (Q1 AUDIT FIX — previously missing)
+# ══════════════════════════════════════════════════════════════════════════
+"""
+Q1 CODE AUDIT FIX (2026-06-20): The manuscript (Figure 10B, Table S1)
+reports SHAP feature-importance stability across three training window
+sizes — full-sample (n≈216), fold-1 (n=108, train 2005-2014), and
+fold-9 (n=204, train 2005-2022) — as evidence that the full-sample SHAP
+ranking above is representative of the walk-forward evaluation context.
+This check did NOT exist anywhere in the repository prior to this fix
+(see 39_CODE_AUDIT_CRITICAL_FINDINGS.md, finding #8). It is added here.
+
+Each fold-specific model is trained fresh on that fold's training
+window ONLY, with anomaly features recomputed from that window's own
+climatology (matching the per-fold discipline used throughout the
+walk-forward notebooks) — NOT reusing model_full or df_analysis's
+2005-2023-wide anomaly columns, which would defeat the purpose of this
+stability check.
+"""
+print("\n" + "=" * 60)
+print("CROSS-FOLD SHAP STABILITY CHECK")
+print("=" * 60)
+
+import xgboost as xgb
+
+FOLD_DEFINITIONS = {
+    "full_sample": df[df["YEAR"] <= 2023].copy(),   # same as df_analysis above
+    "fold_1":      df[df["YEAR"] <= 2014].copy(),    # train window of WF fold 1
+    "fold_9":      df[df["YEAR"] <= 2022].copy(),    # train window of WF fold 9
+}
+
+# Re-use the same best_params XGBoost was tuned with (Part A of NB07).
+# Loaded here from the walk-forward results file to avoid hardcoding.
+try:
+    import json
+    with open(f"{OUT_DIR}/07_xgboost_best_params.json") as _f:
+        _best_params = json.load(_f)
+except FileNotFoundError:
+    print("  ⚠ 07_xgboost_best_params.json not found — falling back to the "
+          "same XGBRegressor defaults used elsewhere in this notebook's "
+          "model_full for consistency.")
+    _best_params = xgb_model.get_params()
+    _best_params = {k: v for k, v in _best_params.items()
+                    if k in ["max_depth", "n_estimators", "learning_rate",
+                             "subsample", "colsample_bytree", "min_child_weight"]}
+
+fold_shap_results = {}
+for fold_name, fold_df_window in FOLD_DEFINITIONS.items():
+    fdf = fold_df_window.copy()
+    for col in RAW_ANOMALY_SOURCE_COLS:
+        fdf[f"{col}_anom"] = fdf[col] - fdf.groupby("MONTH")[col].transform("mean")
+    fdf["ONI_x_CLOUD_anom"] = fdf["ONI"] * fdf["CLOUD_anom"]
+
+    m = xgb.XGBRegressor(**_best_params, reg_alpha=0.1, reg_lambda=1.0,
+                          random_state=42, n_jobs=-1, verbosity=0)
+    m.fit(fdf[FINAL_FEATURES], fdf[TARGET])
+
+    expl = shap.TreeExplainer(m)
+    sv = expl.shap_values(fdf[FINAL_FEATURES])
+    mean_abs_shap = np.abs(sv).mean(axis=0)
+
+    fold_shap_results[fold_name] = pd.Series(mean_abs_shap, index=FINAL_FEATURES)
+    print(f"  {fold_name:<12} (n={len(fdf):3d}): "
+          f"top feature = {FINAL_FEATURES[np.argmax(mean_abs_shap)]} "
+          f"(mean|SHAP|={mean_abs_shap.max():.5f})")
+
+fold_shap_df = pd.DataFrame(fold_shap_results)
+fold_shap_df["rank_full_sample"] = fold_shap_df["full_sample"].rank(ascending=False).astype(int)
+fold_shap_df["rank_fold_1"]      = fold_shap_df["fold_1"].rank(ascending=False).astype(int)
+fold_shap_df["rank_fold_9"]      = fold_shap_df["fold_9"].rank(ascending=False).astype(int)
+fold_shap_df = fold_shap_df.sort_values("rank_full_sample")
+
+print("\n  Rank-1 feature stability across training window sizes:")
+top_feature_per_window = {
+    name: fold_shap_df[f"{name}" if name != "full_sample" else "full_sample"].idxmax()
+    for name in FOLD_DEFINITIONS
+}
+for name, feat in top_feature_per_window.items():
+    print(f"    {name:<12}: rank-1 = {feat}")
+all_same_top1 = len(set(top_feature_per_window.values())) == 1
+print(f"\n  Rank-1 feature IDENTICAL across all 3 window sizes: {all_same_top1}")
+if not all_same_top1:
+    print("  ⚠ WARNING: the manuscript's stability claim does NOT hold for "
+          "this run — update Figure 10B / Table S1 / Section 4.5 text "
+          "accordingly before resubmission.")
+
+fold_shap_df.round(5).to_csv(f"{OUT_DIR}/08_shap_fold_stability.csv")
+print(f"\n  Saved: outputs/08_shap_fold_stability.csv")
 
 # ── SAVE ──────────────────────────────────────────────────────────────────
 shap_df.to_csv(f"{OUT_DIR}/08_shap_values.csv", index=False)

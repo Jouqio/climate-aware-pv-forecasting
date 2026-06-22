@@ -104,20 +104,37 @@ print(f"  ENSO phases: {df['ENSO_phase'].value_counts().to_dict()}")
 print(f"  DMI: mean={df['DMI'].mean():.3f}, std={df['DMI'].std():.3f}")
 
 # ══════════════════════════════════════════════════════════════════════════
-# STEP 2: CLIMATOLOGICAL ANOMALIES (remove seasonal mean → interannual signal)
+# STEP 2: CLIMATOLOGICAL ANOMALIES — REMOVED (Q1 AUDIT FIX, see CHANGELOG.md)
 # ══════════════════════════════════════════════════════════════════════════
-print("\nSTEP 2: Climatological anomaly features")
+print("\nSTEP 2: Climatological anomaly features — INTENTIONALLY DEFERRED")
 
-# Monthly climatology: use FULL series mean per month (no leakage — it's the
-# historical mean, not derived from Y_stoch)
-for col in ["GHI", "CLOUD", "PRECTOT", "T2M"]:
-    climatology = df.groupby("MONTH")[col].mean().rename(f"{col}_clim")
-    df = df.merge(climatology, on="MONTH", how="left")
-    df[f"{col}_anom"] = df[col] - df[f"{col}_clim"]
-    df.drop(columns=[f"{col}_clim"], inplace=True)
+"""
+Q1 CODE AUDIT FIX (2026-06-20): This step used to compute GHI_anom,
+CLOUD_anom, PRECTOT_anom, and T2M_anom using df.groupby("MONTH").mean()
+over the FULL 2005-2025 sample, BEFORE any walk-forward split existed.
+This contaminated every fold's anomaly features (including training
+folds) with calendar-month means that include data from years not yet
+observed at that fold's forecast origin — a confirmed data leakage
+(see 39_CODE_AUDIT_CRITICAL_FINDINGS.md, finding #1).
 
-print(f"  Created anomaly features: GHI_anom, CLOUD_anom, PRECTOT_anom, T2M_anom")
-print(f"  GHI_anom stats: mean={df['GHI_anom'].mean():.4f}, std={df['GHI_anom'].std():.4f}")
+Anomaly features are no longer computed here. They are computed FRESH,
+inside each walk-forward fold's loop, using ONLY that fold's training
+window, via utils.get_split_data(..., raw_anomaly_source_cols=[...]).
+See notebooks 05, 06, 07, 09 for the corrected per-fold implementation.
+
+This notebook still exports the RAW columns (GHI, CLOUD, PRECTOT, T2M)
+required downstream. A SEPARATE, clearly-labeled full-sample anomaly
+version is computed below ONLY for the VIF / correlation-matrix
+DESCRIPTIVE report (Step 9-10) — a non-predictive diagnostic where
+full-sample computation is methodologically legitimate. These
+df_report columns are NEVER used for any walk-forward model fit.
+"""
+print("  GHI_anom / CLOUD_anom / PRECTOT_anom / T2M_anom are NOT created "
+      "in this notebook.")
+print("  They are computed per-fold (train-window-only) in notebooks "
+      "05/06/07/09 via utils.get_split_data().")
+print("  See: 39_CODE_AUDIT_CRITICAL_FINDINGS.md, finding #1, for full rationale.")
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # STEP 3: LAG FEATURES (temporal memory in climate system)
@@ -127,7 +144,11 @@ print("\nSTEP 3: Lag features")
 # GHI lags (most important for forecasting persistence)
 for lag in [1, 3, 6, 12]:
     df[f"GHI_lag{lag}"]       = df["GHI"].shift(lag)
-    df[f"GHI_anom_lag{lag}"]  = df["GHI_anom"].shift(lag)
+    # NOTE (Q1 audit fix): GHI_anom_lag{lag} removed here — it depended on
+    # the now-deferred GHI_anom column and was unused in FINAL_FEATURES
+    # anyway (only raw GHI_lag1/GHI_lag12 are used downstream). If an
+    # anomaly-lag feature is needed in future work, compute it per-fold
+    # inside get_split_data()'s caller, analogous to ONI_x_CLOUD_anom.
 
 # ONI lag (ENSO teleconnection has 2-4 month atmospheric response lag)
 for lag in [1, 2, 3]:
@@ -167,18 +188,26 @@ print(f"  ITCZ_low months (PRECTOT < {prec_q25:.2f} mm/day): {df['ITCZ_low'].sum
 print("\nSTEP 6: Interaction features (physics-based)")
 
 # Cloud-GHI multiplicative interaction (attenuation is multiplicative, not additive)
+# Raw-value interaction — no anomaly dependency, no leakage risk, safe to
+# compute eagerly here.
 df["GHI_x_CLOUD"]        = df["GHI"] * (df["CLOUD"] / 100)
 
-# ENSO × Cloud anomaly (does ENSO modulate the cloud-GHI relationship?)
-df["ONI_x_CLOUD_anom"]   = df["ONI"] * df["CLOUD_anom"]
+# NOTE (Q1 audit fix): ONI_x_CLOUD_anom REMOVED from this notebook —
+# it depends on CLOUD_anom, which is now deferred to per-fold
+# computation (Step 2 above). This interaction is auto-recomputed
+# per-fold inside utils.get_split_data() whenever "ONI_x_CLOUD_anom"
+# appears in the requested feature list, using that fold's freshly
+# computed CLOUD_anom. Do not reintroduce a full-sample version here.
 
 # Thermal-humidity (combined stress on panel performance)
+# Raw-value interaction — no anomaly dependency, no leakage risk.
 df["T2M_x_RH"]           = df["T2M"] * df["RH"]
 
 # Precipitation × Cloud (deep convective cloud indicator)
+# Raw-value interaction — no anomaly dependency, no leakage risk.
 df["PREC_x_CLOUD"]       = df["PRECTOT"] * (df["CLOUD"] / 100)
 
-print(f"  GHI_x_CLOUD, ONI_x_CLOUD_anom, T2M_x_RH, PREC_x_CLOUD")
+print(f"  GHI_x_CLOUD, ONI_x_CLOUD_anom (per-fold, see Step 2 note), T2M_x_RH, PREC_x_CLOUD")
 
 # ══════════════════════════════════════════════════════════════════════════
 # STEP 7: LEAKAGE SAFETY CHECK
@@ -187,7 +216,8 @@ print("\nSTEP 7: Leakage safety audit")
 
 # These features must NOT be in the model feature set (derived from Y_stoch components)
 FORBIDDEN_FEATURES = ["Y_det","Y_stoch","PR_stoch","L_thermal","L_cloud_resid",
-                      "L_aerosol","L_humidity","L_inverter","fire_season"]
+                      "L_aerosol","L_humidity","L_inverter","L_monsoon","L_ENSO",
+                      "fire_season"]
 
 feature_cols = [c for c in df.columns
                 if c not in ["DATE","YEAR","MONTH","ENSO_phase"] + FORBIDDEN_FEATURES
@@ -215,14 +245,16 @@ Features INCLUDED (rationale):
   sin_month, cos_month     : Seasonal forcing — mandatory
   GHI_lag1                 : 1-month persistence (strongest lag)
   GHI_lag12                : Annual cycle memory
-  GHI_anom                 : Interannual signal (leakage-free: climatology pre-computed)
-  CLOUD_anom               : Cloud interannual signal
-  PRECTOT_anom             : Monsoon variability
+  GHI_anom                 : Interannual signal (Q1 AUDIT FIX: now computed
+                              PER-FOLD from training window only — see
+                              utils.get_split_data(); NOT precomputed here)
+  CLOUD_anom               : Cloud interannual signal (per-fold, same as above)
+  PRECTOT_anom             : Monsoon variability (per-fold, same as above)
   ONI                      : ENSO primary driver
   ONI_lag2                 : 2-month teleconnection lag (peak physical response)
-  GHI_x_CLOUD              : Multiplicative cloud attenuation
-  ONI_x_CLOUD_anom         : ENSO-cloud interaction
-  T2M_x_RH                 : Thermal-humidity stress
+  GHI_x_CLOUD              : Multiplicative cloud attenuation (raw values, safe)
+  ONI_x_CLOUD_anom         : ENSO-cloud interaction (per-fold, depends on CLOUD_anom)
+  T2M_x_RH                 : Thermal-humidity stress (raw values, safe)
 
 Features EXCLUDED (rationale):
   GHI_lag3, GHI_lag6       : Correlation with lag1 + lag12 sufficient; VIF risk
@@ -238,30 +270,52 @@ FINAL_FEATURES = [
     "sin_month", "cos_month",   # Seasonal encoding
     "GHI_lag1",                  # Persistence
     "GHI_lag12",                 # Annual memory
-    "GHI_anom",                  # Interannual GHI anomaly
-    "CLOUD_anom",                # Interannual cloud anomaly
-    "PRECTOT_anom",              # Monsoon anomaly
+    "GHI_anom",                  # Interannual GHI anomaly (per-fold downstream)
+    "CLOUD_anom",                # Interannual cloud anomaly (per-fold downstream)
+    "PRECTOT_anom",              # Monsoon anomaly (per-fold downstream)
     "ONI",                       # ENSO forcing
     "ONI_lag2",                  # ENSO lagged response
     "GHI_x_CLOUD",               # Cloud-irradiance interaction
-    "ONI_x_CLOUD_anom",          # ENSO-cloud interaction
+    "ONI_x_CLOUD_anom",          # ENSO-cloud interaction (per-fold downstream)
     "T2M_x_RH",                  # Thermal-humidity stress
 ]
+
+# Raw source columns needed downstream to recompute the anomaly-derived
+# features above on a per-fold basis (Q1 audit fix). Every notebook that
+# calls utils.get_split_data() on this exported parquet must pass this
+# same list as `raw_anomaly_source_cols`.
+RAW_ANOMALY_SOURCE_COLS = ["GHI", "CLOUD", "PRECTOT", "T2M"]
 
 print(f"  Final feature set ({len(FINAL_FEATURES)} features):")
 for i, f in enumerate(FINAL_FEATURES, 1):
     print(f"    {i:02d}. {f}")
+print(f"  Anomaly-derived features among these will be computed PER-FOLD "
+      f"downstream from: {RAW_ANOMALY_SOURCE_COLS}")
 
 # ══════════════════════════════════════════════════════════════════════════
-# STEP 9: VIF ANALYSIS (multicollinearity check)
+# STEP 9: VIF ANALYSIS (DESCRIPTIVE, full-sample — diagnostic report only)
 # ══════════════════════════════════════════════════════════════════════════
-print("\nSTEP 9: Variance Inflation Factor (VIF) analysis")
+print("\nSTEP 9: Variance Inflation Factor (VIF) analysis [DESCRIPTIVE REPORT]")
 
-# Use only rows with complete features (lag features create NaN for first 12 rows)
-df_model = df.dropna(subset=FINAL_FEATURES + ["Y_stoch"]).copy()
-print(f"  Modeling observations after dropping lag NaN rows: {len(df_model)}")
+"""
+Q1 AUDIT FIX NOTE: VIF and the correlation matrix below are DESCRIPTIVE
+diagnostics reported in the manuscript's Methods/Supplementary tables —
+they are NOT a predictive evaluation step, so computing them on the
+full 2005-2025 sample (df_report, built fresh here) is methodologically
+legitimate and matches standard econometric reporting practice. This is
+explicitly DIFFERENT from the walk-forward modeling features, which are
+computed per-fold (Step 2 note, Step 8 above) to avoid leakage. NEVER
+use df_report's anomaly columns for any walk-forward model fit.
+"""
+df_report = df.copy()
+for col in RAW_ANOMALY_SOURCE_COLS:
+    df_report[f"{col}_anom"] = df_report[col] - df_report.groupby("MONTH")[col].transform("mean")
+df_report["ONI_x_CLOUD_anom"] = df_report["ONI"] * df_report["CLOUD_anom"]
 
-X_vif = df_model[FINAL_FEATURES].copy()
+df_report_model = df_report.dropna(subset=FINAL_FEATURES + ["Y_stoch"]).copy()
+print(f"  [Descriptive, full-sample] observations after dropping lag NaN rows: {len(df_report_model)}")
+
+X_vif = df_report_model[FINAL_FEATURES].copy()
 
 vif_data = pd.DataFrame({
     "Feature": FINAL_FEATURES,
@@ -280,9 +334,36 @@ else:
     print(f"\n  ✓ All VIF < 10: no severe multicollinearity")
 
 # ══════════════════════════════════════════════════════════════════════════
-# STEP 10: CORRELATION MATRIX
+# STEP 10: CORRELATION MATRIX (same descriptive, full-sample basis as Step 9)
 # ══════════════════════════════════════════════════════════════════════════
-corr_matrix = df_model[FINAL_FEATURES + ["Y_stoch"]].corr().round(3)
+corr_matrix = df_report_model[FINAL_FEATURES + ["Y_stoch"]].corr().round(3)
+
+# ══════════════════════════════════════════════════════════════════════════
+# EXPORT — model-ready data for WALK-FORWARD notebooks (05/06/07/09)
+# ══════════════════════════════════════════════════════════════════════════
+"""
+Q1 AUDIT FIX: df_model (exported below as 03_model_ready.parquet) is now
+built WITHOUT the anomaly-derived columns (GHI_anom, CLOUD_anom,
+PRECTOT_anom, ONI_x_CLOUD_anom). It retains the RAW columns
+(RAW_ANOMALY_SOURCE_COLS) plus all non-anomaly features. Every modeling
+notebook MUST call:
+
+    from utils import get_split_data
+    X_tr, y_tr, X_te, y_te, dates_te, y_clim = get_split_data(
+        df_model, test_year, features=FINAL_FEATURES,
+        raw_anomaly_source_cols=RAW_ANOMALY_SOURCE_COLS, target="Y_stoch"
+    )
+
+to obtain leakage-free, per-fold-recomputed anomaly features. Dropping
+NaN here is based on the NON-anomaly features only (lag features create
+NaN for the first 12 rows); this does not reintroduce any leakage since
+it is a row-availability filter, not a value computation.
+"""
+NON_ANOMALY_REQUIRED = [f for f in FINAL_FEATURES
+                         if f not in ("GHI_anom", "CLOUD_anom", "PRECTOT_anom",
+                                      "ONI_x_CLOUD_anom")]
+df_model = df.dropna(subset=NON_ANOMALY_REQUIRED + RAW_ANOMALY_SOURCE_COLS + ["Y_stoch"]).copy()
+print(f"\n  Modeling observations after dropping lag NaN rows: {len(df_model)}")
 
 # ── SAVE ──────────────────────────────────────────────────────────────────
 df.to_parquet(f"{DATA_DIR}/03_feature_matrix.parquet", index=False)

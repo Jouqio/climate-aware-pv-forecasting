@@ -28,7 +28,7 @@ from statsmodels.stats.stattools import durbin_watson, jarque_bera
 from statsmodels.tsa.stattools import adfuller, kpss
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from scipy import stats
-import os, warnings
+import os, sys, warnings
 from pathlib import Path
 warnings.filterwarnings("ignore")
 
@@ -36,12 +36,28 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 OUT_DIR  = BASE_DIR / "outputs"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(BASE_DIR.parent))  # utils.py lives at repo root, one level above notebooks/
+from utils import get_split_data, skill_score, verify_no_feature_leakage  # noqa: E402
 
 df = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
 FINAL_FEATURES = pd.read_csv(f"{DATA_DIR}/03_final_features.csv")["feature"].tolist()
 TARGET = "Y_stoch"
+RAW_ANOMALY_SOURCE_COLS = ["GHI", "CLOUD", "PRECTOT", "T2M"]
 
 print(f"Loaded: {len(df)} observations, {len(FINAL_FEATURES)} features")
+
+# ── Q1 AUDIT FIX NOTE ────────────────────────────────────────────────────
+# 03_model_ready.parquet no longer contains GHI_anom / CLOUD_anom /
+# PRECTOT_anom / ONI_x_CLOUD_anom (they were removed from notebook 03 to
+# eliminate a confirmed full-sample climatology leakage). Part A below is
+# a FULL-SAMPLE INFERENTIAL fit (not a held-out forecast evaluation), so
+# computing anomalies on the full sample here is methodologically
+# legitimate — exactly analogous to notebook 03's df_report. Part D
+# (walk-forward) below instead uses utils.get_split_data() to recompute
+# these anomalies PER FOLD from training data only.
+for col in RAW_ANOMALY_SOURCE_COLS:
+    df[f"{col}_anom"] = df[col] - df.groupby("MONTH")[col].transform("mean")
+df["ONI_x_CLOUD_anom"] = df["ONI"] * df["CLOUD_anom"]
 
 # ══════════════════════════════════════════════════════════════════════════
 # PART A: FULL-SAMPLE OLS-HC3 MODEL
@@ -218,33 +234,44 @@ wf_results = []
 all_y_true, all_y_pred = [], []
 
 for fold_idx, test_year in enumerate(range(2015, 2024)):
-    train = df[df["YEAR"] < test_year]
-    test  = df[df["YEAR"] == test_year]
+    # Q1 AUDIT FIX: real leakage guard — fails loudly if per-fold
+    # anomaly recomputation is not actually taking effect for this fold.
+    verify_no_feature_leakage(df, test_year, RAW_ANOMALY_SOURCE_COLS)
 
-    X_tr = sm.add_constant(train[FINAL_FEATURES], has_constant="add")
-    y_tr = train[TARGET]
-    X_te = sm.add_constant(test[FINAL_FEATURES], has_constant="add")
-    y_te = test[TARGET].values
+    X_tr_arr, y_tr_arr, X_te_arr, y_te, dates_te, y_clim_pred = get_split_data(
+        df, test_year, features=FINAL_FEATURES,
+        raw_anomaly_source_cols=RAW_ANOMALY_SOURCE_COLS, target=TARGET
+    )
+    n_train = (df["YEAR"] < test_year).sum()
+    n_test  = (df["YEAR"] == test_year).sum()
 
-    # Refit OLS on expanding training window
-    fold_ols = sm.OLS(y_tr, X_tr).fit(cov_type="HC3")
-    y_pred   = fold_ols.predict(X_te)
+    X_tr = sm.add_constant(pd.DataFrame(X_tr_arr, columns=FINAL_FEATURES), has_constant="add")
+    X_te = sm.add_constant(pd.DataFrame(X_te_arr, columns=FINAL_FEATURES), has_constant="add")
+
+    # Refit OLS on expanding training window (features now leakage-free
+    # per-fold anomalies, NOT the full-sample version used in Part A)
+    fold_ols = sm.OLS(y_tr_arr, X_tr).fit(cov_type="HC3")
+    y_pred   = fold_ols.predict(X_te).values
 
     fold_rmse = np.sqrt(np.mean((y_te - y_pred) ** 2))
     fold_mae  = np.mean(np.abs(y_te - y_pred))
-    fold_ss   = 1 - fold_rmse / np.sqrt(np.mean((y_te - y_te.mean()) ** 2))
+    # Q1 AUDIT FIX: skill score now computed against the leakage-free
+    # per-fold expanding-window climatological baseline (y_clim_pred),
+    # NOT against the test set's own mean (the original bug).
+    fold_ss   = skill_score(y_te, y_pred, y_clim_pred)
 
     wf_results.append({
         "fold": fold_idx + 1, "test_year": test_year,
-        "n_train": len(train), "n_test": len(test),
+        "n_train": int(n_train), "n_test": int(n_test),
         "RMSE": round(fold_rmse, 6), "MAE": round(fold_mae, 6),
         "SkillScore": round(fold_ss, 4),
+        "ClimRMSE": round(np.sqrt(np.mean((y_te - y_clim_pred) ** 2)), 6),
         "R2_train": round(fold_ols.rsquared, 4)
     })
     all_y_true.extend(y_te)
     all_y_pred.extend(y_pred)
 
-    print(f"  Fold {fold_idx+1} ({test_year}): train={len(train):3d} | "
+    print(f"  Fold {fold_idx+1} ({test_year}): train={len(X_tr_arr):3d} | "
           f"RMSE={fold_rmse:.5f} | MAE={fold_mae:.5f} | SS={fold_ss:.3f}")
 
 df_wf = pd.DataFrame(wf_results)

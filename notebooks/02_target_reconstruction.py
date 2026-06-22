@@ -170,6 +170,56 @@ L_inverter = np.clip(L_inverter, 0.04, 0.28)
 
 print(f"  L_inverter:  mean={L_inverter.mean():.4f}, std={L_inverter.std():.4f}")
 
+# ── LOSS COMPONENT 6: Monsoon / ITCZ Seasonal Variability (Q1 AUDIT FIX) ──
+"""
+Q1 CODE AUDIT FIX (2026-06-20): The manuscript (Table 2, Figure 6
+caption) describes SEVEN stochastic loss components, including
+L_monsoon ~ N(0, σ_seasonal) for ITCZ-related variability. This
+component did not exist in the repository's committed code prior to
+this fix — only 5 of the 7 documented components were implemented (see
+39_CODE_AUDIT_CRITICAL_FINDINGS.md, finding #7). Added here.
+
+Seasonal variance is largest during ITCZ transition months (Mar-Apr,
+Sep-Oct for the equatorial Maritime Continent) and smallest during the
+more stable mid-monsoon months, consistent with the manuscript's
+physical motivation.
+"""
+itcz_transition = df["MONTH"].isin([3, 4, 9, 10]).values.astype(float)
+sigma_seasonal   = 0.010 + 0.015 * itcz_transition   # higher variance in transition months
+L_monsoon        = np.random.normal(0, sigma_seasonal, n)
+L_monsoon        = np.clip(L_monsoon, -0.05, 0.05)
+
+print(f"  L_monsoon:   mean={L_monsoon.mean():.4f}, std={L_monsoon.std():.4f} "
+      f"[ITCZ transition months: {int(itcz_transition.sum())}]")
+
+# ── LOSS COMPONENT 7: ENSO-Cloud Coupling (Q1 AUDIT FIX) ──────────────────
+"""
+Manuscript Table 2: L_ENSO ~ N(0, σ∝|ONI|) — ENSO-cloud coupling.
+
+PIPELINE ORDERING NOTE: the ONI index proper is constructed in notebook
+03 (03_feature_engineering.py), which runs AFTER this notebook in the
+pipeline. To avoid introducing a circular cross-notebook dependency
+(02 depending on 03's output, while 03's anomaly features are in turn
+computed from data produced by 01/02), this component uses a
+self-contained, simplified ENSO-amplitude PROXY: a smooth multi-year
+oscillation with realistic period (~3-5 years, matching observed ENSO
+recurrence) and amplitude, rather than importing the actual ONI series.
+This proxy captures the INTENDED variance-amplification mechanism
+(ENSO state modulates cloud-GHI coupling variance) without requiring
+notebook 03 to run first. If exact consistency with the ONI series used
+downstream in notebooks 03/06 is required, refactor this block to load
+the same oni_noaa_cpc_real.csv (or its synthetic fallback) produced by
+fetch_oni_dmi.py, called BEFORE this point in the pipeline.
+"""
+t_idx = np.arange(n)
+enso_amplitude_proxy = 0.9 * np.sin(2 * np.pi * t_idx / 46) + 0.4 * np.sin(2 * np.pi * t_idx / 84)
+sigma_enso = 0.008 * np.abs(enso_amplitude_proxy)
+L_ENSO = np.random.normal(0, np.maximum(sigma_enso, 1e-4), n)
+L_ENSO = np.clip(L_ENSO, -0.04, 0.04)
+
+print(f"  L_ENSO:      mean={L_ENSO.mean():.4f}, std={L_ENSO.std():.4f} "
+      f"[proxy amplitude range: {enso_amplitude_proxy.min():.2f} to {enso_amplitude_proxy.max():.2f}]")
+
 # ── COMBINE INTO STOCHASTIC PERFORMANCE RATIO ────────────────────────────
 PR_base        = 0.80   # Baseline PR for well-maintained tropical system
 PR_stochastic  = (PR_base
@@ -177,7 +227,9 @@ PR_stochastic  = (PR_base
                   * (1 - L_cloud_resid)
                   * (1 - L_aerosol)
                   * (1 - L_humidity)
-                  * (1 - L_inverter))
+                  * (1 - L_inverter)
+                  * (1 - L_monsoon)
+                  * (1 - L_ENSO))
 
 print(f"\n  PR_stochastic: mean={PR_stochastic.mean():.4f}, std={PR_stochastic.std():.4f} "
       f"[range {PR_stochastic.min():.4f}–{PR_stochastic.max():.4f}]")
@@ -198,6 +250,8 @@ df["L_cloud_resid"]= L_cloud_resid
 df["L_aerosol"]    = L_aerosol
 df["L_humidity"]   = L_humidity
 df["L_inverter"]   = L_inverter
+df["L_monsoon"]    = L_monsoon     # Q1 audit fix: now stored (7th component)
+df["L_ENSO"]       = L_ENSO        # Q1 audit fix: now stored (7th component)
 df["PR_stoch"]     = PR_stochastic
 df["fire_season"]  = fire_season
 
@@ -267,4 +321,4 @@ leak_df = pd.DataFrame([{
 leak_df.to_csv(f"{OUT_DIR}/02_leakage_demonstration.csv", index=False)
 
 print(f"\n✅ Notebook 02 complete.")
-print(f"   Columns added: Y_stoch, PR_stoch, L_thermal, L_cloud_resid, L_aerosol, L_humidity, L_inverter")
+print(f"   Columns added: Y_stoch, PR_stoch, L_thermal, L_cloud_resid, L_aerosol, L_humidity, L_inverter, L_monsoon, L_ENSO")
