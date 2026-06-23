@@ -73,12 +73,18 @@ y_full = df[TARGET]
 # HC3 is preferred for n<250: provides better finite-sample correction
 ols_hc3 = sm.OLS(y_full, X_full).fit(cov_type="HC3")
 
-print(f"\n  Model: OLS-HC3 | n={len(df)} | k={len(FINAL_FEATURES)+1}")
+print(f"\n  Model: OLS-HC3 (full 12-feature set, for VIF/diagnostic completeness) "
+      f"| n={len(df)} | k={len(FINAL_FEATURES)+1}")
 print(f"  R²         = {ols_hc3.rsquared:.4f}")
 print(f"  Adj. R²    = {ols_hc3.rsquared_adj:.4f}")
 print(f"  F-stat     = {ols_hc3.fvalue:.4f}  (p={ols_hc3.f_pvalue:.4e})")
 print(f"  AIC        = {ols_hc3.aic:.2f}")
 print(f"  BIC        = {ols_hc3.bic:.2f}")
+print(f"  NOTE: this 12-feature fit includes GHI_x_CLOUD (VIF≈2900+) and "
+      f"T2M_x_RH (VIF≈2000+), which destabilizes GHI_anom's coefficient "
+      f"via severe multicollinearity. This specification is reported here "
+      f"ONLY for completeness/VIF diagnostics. The manuscript's primary "
+      f"inferential claims use the LOW-VIF specification below.")
 
 print(f"\n  {'Feature':<22} {'Coef':>10} {'HC3-SE':>10} {'t-stat':>8} {'p-val':>8} {'Sig':>5}")
 print(f"  {'-'*70}")
@@ -91,7 +97,7 @@ for name, coef, se, t, p in zip(
     sig = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "."
     print(f"  {name:<22} {coef:>10.5f} {se:>10.5f} {t:>8.3f} {p:>8.4f} {sig:>5}")
 
-# Save coefficient table
+# Save coefficient table (full 12-feature specification, diagnostic use)
 coef_df = pd.DataFrame({
     "Feature":  ols_hc3.params.index,
     "Coef":     ols_hc3.params.values,
@@ -101,6 +107,77 @@ coef_df = pd.DataFrame({
     "CI_lower": ols_hc3.conf_int()[0].values,
     "CI_upper": ols_hc3.conf_int()[1].values,
 }).round(6)
+coef_df.to_csv(f"{OUT_DIR}/05_ols_coefficients_FULL12.csv", index=False)
+
+# ══════════════════════════════════════════════════════════════════════════
+# PART A2: LOW-VIF OLS-HC3 SPECIFICATION (Q1 AUDIT FIX — was MISSING)
+# ══════════════════════════════════════════════════════════════════════════
+"""
+Q1 CODE AUDIT FIX (2026-06-20): The manuscript's primary inferential
+claims (Abstract, Section 4.2, Table 5) report an 8-feature "low-VIF"
+OLS-HC3 specification — excluding the two extreme-VIF interaction terms
+(GHI_x_CLOUD VIF≈2900+, T2M_x_RH VIF≈2000+) and the redundant GHI_lag12
+and ONI_x_CLOUD_anom terms — with GHI_anom as the headline significant
+predictor (manuscript: β=+0.088, p<0.001).
+
+This specification did NOT exist anywhere in the repository prior to
+this fix: notebook 05 only ever fit the full 12-feature set above, in
+which severe multicollinearity from GHI_x_CLOUD destabilizes and can
+even reverse the sign of GHI_anom's coefficient (see printed full-
+specification table above for comparison). Without this fix, the
+manuscript's single most load-bearing empirical claim had no
+corresponding, reproducible code path in this codebase.
+"""
+print("\n" + "=" * 60)
+print("PART A2: LOW-VIF OLS-HC3 SPECIFICATION (manuscript's primary inferential model)")
+print("=" * 60)
+
+LOW_VIF_FEATURES = ["sin_month", "cos_month", "GHI_anom", "CLOUD_anom",
+                     "PRECTOT_anom", "ONI", "ONI_lag2", "GHI_lag1"]
+missing = [f for f in LOW_VIF_FEATURES if f not in FINAL_FEATURES]
+assert not missing, f"LOW_VIF_FEATURES references unknown columns: {missing}"
+
+X_lowvif = sm.add_constant(df[LOW_VIF_FEATURES])
+ols_lowvif = sm.OLS(y_full, X_lowvif).fit(cov_type="HC3")
+
+print(f"\n  Model: OLS-HC3 (LOW-VIF, 8 features) | n={len(df)} | k={len(LOW_VIF_FEATURES)+1}")
+print(f"  R²         = {ols_lowvif.rsquared:.4f}")
+print(f"  Adj. R²    = {ols_lowvif.rsquared_adj:.4f}")
+print(f"  AIC        = {ols_lowvif.aic:.2f}")
+print(f"  BIC        = {ols_lowvif.bic:.2f}")
+
+print(f"\n  {'Feature':<22} {'Coef':>10} {'HC3-SE':>10} {'t-stat':>8} {'p-val':>8} {'Sig':>5}")
+print(f"  {'-'*70}")
+for name, coef, se, t, p in zip(
+        ols_lowvif.params.index, ols_lowvif.params.values,
+        ols_lowvif.bse.values, ols_lowvif.tvalues.values,
+        ols_lowvif.pvalues.values):
+    sig = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "."
+    print(f"  {name:<22} {coef:>10.5f} {se:>10.5f} {t:>8.3f} {p:>8.4f} {sig:>5}")
+
+# VIF check for the low-VIF specification itself
+X_vif_check = df[LOW_VIF_FEATURES].copy()
+vif_lowvif = pd.DataFrame({
+    "Feature": LOW_VIF_FEATURES,
+    "VIF": [variance_inflation_factor(X_vif_check.values, i)
+            for i in range(X_vif_check.shape[1])]
+}).sort_values("VIF", ascending=False).round(3)
+print(f"\n  Low-VIF specification VIF check:")
+print(vif_lowvif.to_string(index=False))
+
+coef_lowvif_df = pd.DataFrame({
+    "Feature":  ols_lowvif.params.index,
+    "Coef":     ols_lowvif.params.values,
+    "HC3_SE":   ols_lowvif.bse.values,
+    "t_stat":   ols_lowvif.tvalues.values,
+    "p_value":  ols_lowvif.pvalues.values,
+    "CI_lower": ols_lowvif.conf_int()[0].values,
+    "CI_upper": ols_lowvif.conf_int()[1].values,
+}).round(6)
+coef_lowvif_df.to_csv(f"{OUT_DIR}/05_ols_coefficients.csv", index=False)
+vif_lowvif.to_csv(f"{OUT_DIR}/05_ols_lowvif_vif.csv", index=False)
+print(f"\n  Saved: outputs/05_ols_coefficients.csv (LOW-VIF spec — manuscript's primary table)")
+print(f"  Saved: outputs/05_ols_coefficients_FULL12.csv (full 12-feature — diagnostic only)")
 
 # ══════════════════════════════════════════════════════════════════════════
 # PART B: UNIT ROOT TESTS (Pre-modeling)
@@ -280,7 +357,13 @@ print(f"\n  AGGREGATE OLS Walk-forward RMSE: {overall_rmse:.6f}")
 print(f"  AGGREGATE OLS SkillScore: {df_wf['SkillScore'].mean():.4f} ± {df_wf['SkillScore'].std():.4f}")
 
 # ── SAVE ──────────────────────────────────────────────────────────────────
-coef_df.to_csv(f"{OUT_DIR}/05_ols_coefficients.csv", index=False)
+# NOTE (Q1 audit fix): coef_df (full 12-feature spec) was already saved
+# to 05_ols_coefficients_FULL12.csv in Part A above. coef_lowvif_df (the
+# manuscript's primary low-VIF specification) was already saved to
+# 05_ols_coefficients.csv in Part A2. Do NOT re-save coef_df to that
+# filename here -- doing so would silently overwrite the low-VIF result
+# with the full-12-feature one, reintroducing the exact discrepancy this
+# fix was meant to resolve.
 df_wf.to_csv(f"{OUT_DIR}/05_ols_walkforward_results.csv", index=False)
 pd.DataFrame(list(diag_results.items()), columns=["Test","Results"]).to_csv(
     f"{OUT_DIR}/05_ols_diagnostics.csv", index=False)
