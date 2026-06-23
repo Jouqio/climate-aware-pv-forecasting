@@ -32,7 +32,7 @@ DATA_DIR = BASE_DIR / "data"
 OUT_DIR  = BASE_DIR / "outputs"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(BASE_DIR.parent))  # utils.py lives at repo root, one level above notebooks/
-from utils import skill_score, climatology_baseline_predict  # noqa: E402
+from utils import skill_score, climatology_baseline_predict, piaw, winkler_score  # noqa: E402
 
 df_raw = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")  # keeps YEAR/MONTH/DATE as columns, used for per-fold climatology
 df = df_raw.set_index("DATE").asfreq("MS")   # Monthly Start frequency
@@ -244,12 +244,21 @@ for fold_idx, test_year in enumerate(range(2015, 2024)):
         # PICP (95% PI)
         picp_val = np.mean((y_te >= pi_lo) & (y_te <= pi_hi))
 
+        # Q1 AUDIT FIX: Winkler Score and PIAW were cited repeatedly in
+        # the manuscript (Section 4.3, Table 6, Figures 8/9) but were
+        # never actually computed anywhere in this repository. Added
+        # here using utils.winkler_score()/utils.piaw().
+        piaw_val    = piaw(pi_lo, pi_hi)
+        winkler_val = winkler_score(y_te, pi_lo, pi_hi, alpha=0.05)
+
         wf_results.append({
             "fold": fold_idx + 1, "test_year": test_year,
             "n_train": len(train),
             "RMSE": round(fold_rmse, 6), "MAE": round(fold_mae, 6),
             "SkillScore": round(fold_ss, 4),
             "PICP_95": round(picp_val, 4),
+            "PIAW": round(piaw_val, 6),
+            "Winkler": round(winkler_val, 6),
             "converged": True
         })
         all_y_true_sarimax.extend(y_te)
@@ -336,3 +345,5 @@ print(f"\n✅ Notebook 06 complete.")
 print(f"   Best SARIMAX order: {BEST_ORDER}{BEST_SEASONAL}")
 print(f"   Walk-forward mean RMSE: {valid_folds['RMSE'].mean():.6f}")
 print(f"   PICP 95%: {valid_folds['PICP_95'].mean():.4f} (nominal: 0.950)")
+print(f"   Mean PIAW: {valid_folds['PIAW'].mean():.4f} kWh/m\u00b2/day")
+print(f"   Mean Winkler Score (\u03b1=0.05): {valid_folds['Winkler'].mean():.4f} kWh/m\u00b2/day")

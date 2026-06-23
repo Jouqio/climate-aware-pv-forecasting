@@ -307,6 +307,36 @@ else:
     print(f"  → All three models perform equivalently → OLS-HC3 preferred (parsimony)")
 
 # ══════════════════════════════════════════════════════════════════════════
+# PART C2: WILCOXON SIGNED-RANK TEST — model vs climatology, per fold
+# Q1 AUDIT FIX: cited repeatedly in the manuscript (Abstract, Section 4.3,
+# Conclusion) but never actually computed anywhere in this repository.
+# ══════════════════════════════════════════════════════════════════════════
+print("\n" + "=" * 60)
+print("PART C2: WILCOXON SIGNED-RANK TEST (model RMSE vs. per-fold climatology)")
+print("=" * 60)
+
+clim_rmse_per_fold = ols_wf["ClimRMSE"].values[:n_folds]  # same per-fold climatology used by all models
+
+wilcoxon_results = {}
+for name, model_rmse in [("OLS-HC3", rmse_ols), ("XGBoost", rmse_xgb), ("SARIMAX+ONI", rmse_sar)]:
+    diffs = model_rmse - clim_rmse_per_fold
+    if np.all(diffs == 0):
+        stat, p = np.nan, np.nan
+    else:
+        try:
+            stat, p = stats.wilcoxon(model_rmse, clim_rmse_per_fold, alternative="less")
+        except ValueError:
+            stat, p = np.nan, np.nan
+    n_pos = int(np.sum(diffs < 0))  # model RMSE < clim RMSE => positive skill
+    wilcoxon_results[name] = {"stat": float(stat), "p": float(p),
+                               "n_positive_folds": n_pos, "n_folds": int(n_folds)}
+    print(f"  {name:<14}: Wilcoxon stat={stat:.3f}  p={p:.4f}  "
+          f"({n_pos}/{n_folds} folds beat climatology)")
+
+pd.DataFrame(wilcoxon_results).T.to_csv(f"{OUT_DIR}/09_wilcoxon_test_results.csv")
+print(f"\n  Saved: outputs/09_wilcoxon_test_results.csv")
+
+# ══════════════════════════════════════════════════════════════════════════
 # PART D: ENSO-RESIDUAL LINKAGE ANALYSIS
 # ══════════════════════════════════════════════════════════════════════════
 print("\n" + "=" * 60)
