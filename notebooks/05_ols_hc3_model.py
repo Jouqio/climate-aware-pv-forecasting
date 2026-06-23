@@ -229,8 +229,14 @@ print("\n" + "=" * 60)
 print("PART C: RESIDUAL DIAGNOSTICS (Post-estimation)")
 print("=" * 60)
 
-resid = ols_hc3.resid.values
-y_hat = ols_hc3.fittedvalues.values
+# Q1 AUDIT FIX: diagnostics now computed on the LOW-VIF specification
+# (ols_lowvif), the manuscript's primary inferential model, rather than
+# the full 12-feature ols_hc3 (which includes the extreme-VIF
+# interaction terms and is reported only for completeness in Part A).
+print("  NOTE: diagnostics below are for the LOW-VIF (8-feature) "
+      "specification — the manuscript's primary inferential model.")
+resid = ols_lowvif.resid.values
+y_hat = ols_lowvif.fittedvalues.values
 
 diag_results = {}
 
@@ -264,14 +270,14 @@ for lag, row in lb_results.iterrows():
     }
 
 # 4. White test (heteroskedasticity)
-white_stat, white_p, white_f, white_fp = het_white(resid, X_full)
+white_stat, white_p, white_f, white_fp = het_white(resid, X_lowvif)  # Q1 fix: match low-VIF resid
 diag_results["White_Test"] = {
     "stat": round(white_stat, 4), "p_value": round(white_p, 4),
     "interpretation": "Heteroskedastic → HC3 SE correct choice" if white_p < 0.05 else "Homoskedastic"
 }
 
 # 5. Breusch-Pagan
-bp_stat, bp_p, bp_f, bp_fp = het_breuschpagan(resid, X_full)
+bp_stat, bp_p, bp_f, bp_fp = het_breuschpagan(resid, X_lowvif)  # Q1 fix: match low-VIF resid
 diag_results["Breusch_Pagan"] = {
     "stat": round(bp_stat, 4), "p_value": round(bp_p, 4),
     "interpretation": "Heteroskedastic" if bp_p < 0.05 else "Homoskedastic"
