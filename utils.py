@@ -406,9 +406,29 @@ def get_split_data(df: pd.DataFrame, test_year: int, features: list[str],
         clim_result = expanding_climatology(train, test, raw_anomaly_source_cols, month_col)
         for col in raw_anomaly_source_cols:
             anom_name = f"{col}_anom"
-            if anom_name in features:
+            if anom_name in features or any(anom_name in f for f in features if "_x_" in f):
                 train[anom_name] = clim_result["train_anom"][anom_name].values
                 test[anom_name] = clim_result["test_anom"][anom_name].values
+
+        # AUDIT FIX (2026-06-20): auto-recompute "A_x_B" interaction
+        # features (this repo's naming convention, e.g.
+        # "ONI_x_CLOUD_anom") so they use the freshly per-fold-
+        # recomputed anomaly columns above, not a stale full-sample
+        # version. Without this, fixing the base anomaly column alone
+        # would still leave a SECOND, hidden leakage channel open via
+        # any interaction term built on top of it.
+        for feat in features:
+            if "_x_" in feat and feat not in train.columns:
+                a, b = feat.split("_x_", 1)
+                if a in train.columns and b in train.columns:
+                    train[feat] = train[a].values * train[b].values
+                    test[feat] = test[a].values * test[b].values
+                else:
+                    raise KeyError(
+                        f"Cannot auto-build interaction feature '{feat}': "
+                        f"component '{a}' or '{b}' not found in recomputed "
+                        f"train/test frame. Check raw_anomaly_source_cols."
+                    )
 
     y_clim_pred = climatology_baseline_predict(train, test, target, month_col)
 

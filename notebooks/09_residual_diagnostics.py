@@ -26,7 +26,7 @@ import numpy as np
 from scipy import stats
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.tsa.stattools import adfuller
-import warnings, os
+import warnings, os, sys
 from pathlib import Path
 warnings.filterwarnings("ignore")
 
@@ -34,6 +34,8 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 OUT_DIR  = BASE_DIR / "outputs"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(BASE_DIR.parent))  # utils.py lives at repo root, one level above notebooks/
+from utils import climatology_baseline_predict  # noqa: E402
 
 # ── Load all predictions ───────────────────────────────────────────────────
 df_meta  = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
@@ -121,9 +123,41 @@ perf_rows = [
     compute_metrics(y_true, df_cmp["y_xgb"].values,    "XGBoost"),
 ]
 
-# Climatology baseline
-y_clim = np.tile(df_cmp.groupby(df_cmp["DATE"].dt.month)["y_true"].transform("mean").values, 1)
-y_clim = df_cmp.groupby(df_cmp["DATE"].dt.month)["y_true"].transform("mean").values
+# ──────────────────────────────────────────────────────────────────────────
+# Climatology baseline — Q1 AUDIT FIX (CRITICAL, finding #4)
+# ──────────────────────────────────────────────────────────────────────────
+"""
+The original implementation computed:
+    y_clim = df_cmp.groupby(df_cmp["DATE"].dt.month)["y_true"].transform("mean")
+i.e., the calendar-month mean of Y_stoch using ALL of 2015-2023 test-
+period data COMBINED. This means, e.g., the "baseline forecast" for
+January 2015 used the average of January 2015 AND January 2016-2023 —
+using six to eight YEARS OF FUTURE DATA to predict the earliest test
+year. This is precisely the "aggregate baseline" methodological error
+that the manuscript's Methods Section 3.5 explicitly identifies and
+claims to correct via a per-fold expanding-window baseline — yet this
+exact bug was still present in this notebook's final comparison table
+(see 39_CODE_AUDIT_CRITICAL_FINDINGS.md, finding #4).
+
+The corrected version below builds the climatology baseline by
+concatenating each fold's OWN train-only (expanding-window) prediction,
+using utils.climatology_baseline_predict(), then merges it onto df_cmp
+by DATE to guarantee correct row alignment regardless of df_cmp's
+internal ordering.
+"""
+y_clim_parts = []
+for test_year in range(2015, 2024):
+    train_y = df_meta[df_meta["YEAR"] < test_year]
+    test_y  = df_meta[df_meta["YEAR"] == test_year][["DATE", "MONTH"]].copy()
+    test_y["y_clim"] = climatology_baseline_predict(train_y, test_y, "Y_stoch")
+    y_clim_parts.append(test_y[["DATE", "y_clim"]])
+
+df_clim = pd.concat(y_clim_parts, ignore_index=True)
+df_cmp = df_cmp.merge(df_clim, on="DATE", how="left")
+assert df_cmp["y_clim"].isna().sum() == 0, \
+    "Climatology baseline merge failed for some dates — check DATE alignment."
+y_clim = df_cmp["y_clim"].values
+
 perf_rows.append(compute_metrics(y_true, y_clim, "Climatology_baseline"))
 
 df_perf = pd.DataFrame(perf_rows)
@@ -271,6 +305,36 @@ if p_friedman < 0.05:
 else:
     print(f"  → No significant difference (p={p_friedman:.4f} ≥ 0.05)")
     print(f"  → All three models perform equivalently → OLS-HC3 preferred (parsimony)")
+
+# ══════════════════════════════════════════════════════════════════════════
+# PART C2: WILCOXON SIGNED-RANK TEST — model vs climatology, per fold
+# Q1 AUDIT FIX: cited repeatedly in the manuscript (Abstract, Section 4.3,
+# Conclusion) but never actually computed anywhere in this repository.
+# ══════════════════════════════════════════════════════════════════════════
+print("\n" + "=" * 60)
+print("PART C2: WILCOXON SIGNED-RANK TEST (model RMSE vs. per-fold climatology)")
+print("=" * 60)
+
+clim_rmse_per_fold = ols_wf["ClimRMSE"].values[:n_folds]  # same per-fold climatology used by all models
+
+wilcoxon_results = {}
+for name, model_rmse in [("OLS-HC3", rmse_ols), ("XGBoost", rmse_xgb), ("SARIMAX+ONI", rmse_sar)]:
+    diffs = model_rmse - clim_rmse_per_fold
+    if np.all(diffs == 0):
+        stat, p = np.nan, np.nan
+    else:
+        try:
+            stat, p = stats.wilcoxon(model_rmse, clim_rmse_per_fold, alternative="less")
+        except ValueError:
+            stat, p = np.nan, np.nan
+    n_pos = int(np.sum(diffs < 0))  # model RMSE < clim RMSE => positive skill
+    wilcoxon_results[name] = {"stat": float(stat), "p": float(p),
+                               "n_positive_folds": n_pos, "n_folds": int(n_folds)}
+    print(f"  {name:<14}: Wilcoxon stat={stat:.3f}  p={p:.4f}  "
+          f"({n_pos}/{n_folds} folds beat climatology)")
+
+pd.DataFrame(wilcoxon_results).T.to_csv(f"{OUT_DIR}/09_wilcoxon_test_results.csv")
+print(f"\n  Saved: outputs/09_wilcoxon_test_results.csv")
 
 # ══════════════════════════════════════════════════════════════════════════
 # PART D: ENSO-RESIDUAL LINKAGE ANALYSIS

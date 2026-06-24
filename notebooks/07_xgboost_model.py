@@ -28,7 +28,7 @@ import numpy as np
 import xgboost as xgb
 from sklearn.model_selection import ParameterGrid
 from sklearn.metrics import mean_squared_error
-import os, warnings
+import os, sys, warnings
 from pathlib import Path
 warnings.filterwarnings("ignore")
 
@@ -38,10 +38,13 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 OUT_DIR  = BASE_DIR / "outputs"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(BASE_DIR.parent))  # utils.py lives at repo root, one level above notebooks/
+from utils import get_split_data, skill_score, verify_no_feature_leakage  # noqa: E402
 
 df = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
 FINAL_FEATURES = pd.read_csv(f"{DATA_DIR}/03_final_features.csv")["feature"].tolist()
 TARGET = "Y_stoch"
+RAW_ANOMALY_SOURCE_COLS = ["GHI", "CLOUD", "PRECTOT", "T2M"]
 
 print(f"Loaded: {len(df)} observations, {len(FINAL_FEATURES)} features")
 
@@ -60,8 +63,24 @@ Validation within this window: last 2 years (2013-2014) as inner holdout.
 """
 
 # Fold 1: train 2005-2012 inner train, 2013-2014 inner val
-inner_train = df[df["YEAR"] <= 2012]
-inner_val   = df[(df["YEAR"] >= 2013) & (df["YEAR"] <= 2014)]
+inner_train = df[df["YEAR"] <= 2012].copy()
+inner_val   = df[(df["YEAR"] >= 2013) & (df["YEAR"] <= 2014)].copy()
+
+# Q1 AUDIT FIX: recompute anomaly-derived features for the hyperparameter
+# search using ONLY inner_train's climatology (2005-2012), applied to
+# both inner_train and inner_val. The original code used the *_anom
+# columns precomputed once on the full 2005-2025 sample in notebook 03 —
+# this would leak 2013-2025 information into a tuning step that is
+# supposed to see only 2005-2012. This fix extends the same per-fold
+# discipline used in the main walk-forward loop (Part B) down to the
+# hyperparameter search itself.
+from utils import expanding_climatology
+_clim = expanding_climatology(inner_train, inner_val, RAW_ANOMALY_SOURCE_COLS)
+for col in RAW_ANOMALY_SOURCE_COLS:
+    inner_train[f"{col}_anom"] = _clim["train_anom"][f"{col}_anom"].values
+    inner_val[f"{col}_anom"]   = _clim["test_anom"][f"{col}_anom"].values
+inner_train["ONI_x_CLOUD_anom"] = inner_train["ONI"] * inner_train["CLOUD_anom"]
+inner_val["ONI_x_CLOUD_anom"]   = inner_val["ONI"] * inner_val["CLOUD_anom"]
 
 X_inner_tr = inner_train[FINAL_FEATURES].values
 y_inner_tr = inner_train[TARGET].values
@@ -115,6 +134,14 @@ for k, v in best_params.items():
 assert best_params.get("max_depth", 0) <= 5, "max_depth exceeded constraint"
 print(f"  ✓ max_depth constraint satisfied")
 
+# Q1 AUDIT FIX: persist best_params so notebook 08's cross-fold SHAP
+# stability check (also added as part of this audit fix) can reuse the
+# SAME hyperparameters, rather than falling back to generic defaults.
+import json
+with open(f"{OUT_DIR}/07_xgboost_best_params.json", "w") as f:
+    json.dump(best_params, f, indent=2)
+print(f"  Saved: outputs/07_xgboost_best_params.json")
+
 # ══════════════════════════════════════════════════════════════════════════
 # PART B: WALK-FORWARD EVALUATION (9 folds)
 # ══════════════════════════════════════════════════════════════════════════
@@ -127,11 +154,15 @@ For XGBoost walk-forward:
   - Use best_params found in Part A (fixed across all folds — conservative)
   - No re-tuning per fold (would be computationally expensive and
     potentially over-optimistic with only 9 folds)
-  - Bootstrap PI: fit model B=100 times with different random seeds
-    on training data; use prediction distribution across bootstrap models
+  - Bootstrap PI: fit model B=200 times with different random seeds
+    on training data; use prediction distribution across bootstrap models,
+    WITH residual noise added back (see Q1 audit fix note below)
 """
 
-BOOTSTRAP_SAMPLES = 50   # Reduced for speed; use 200 for final paper
+# Q1 AUDIT FIX: was 50 ("Reduced for speed; use 200 for final paper" —
+# the code comment's own TODO was never applied before this was
+# committed). Set to 200 to match what the manuscript should report.
+BOOTSTRAP_SAMPLES = 200
 
 wf_results   = []
 all_y_true   = []
@@ -140,13 +171,13 @@ all_pi_lower = []
 all_pi_upper = []
 
 for fold_idx, test_year in enumerate(range(2015, 2024)):
-    train = df[df["YEAR"] < test_year]
-    test  = df[df["YEAR"] == test_year]
+    # Q1 AUDIT FIX: real leakage guard for this fold.
+    verify_no_feature_leakage(df, test_year, RAW_ANOMALY_SOURCE_COLS)
 
-    X_tr = train[FINAL_FEATURES].values
-    y_tr = train[TARGET].values
-    X_te = test[FINAL_FEATURES].values
-    y_te = test[TARGET].values
+    X_tr, y_tr, X_te, y_te, dates_te, y_clim_pred = get_split_data(
+        df, test_year, features=FINAL_FEATURES,
+        raw_anomaly_source_cols=RAW_ANOMALY_SOURCE_COLS, target=TARGET
+    )
 
     # Primary model
     model_fold = xgb.XGBRegressor(
@@ -156,6 +187,18 @@ for fold_idx, test_year in enumerate(range(2015, 2024)):
     )
     model_fold.fit(X_tr, y_tr)
     y_pred = model_fold.predict(X_te)
+
+    # Q1 AUDIT FIX: training-residual standard deviation, used to add
+    # aleatoric (irreducible) noise back into each bootstrap prediction
+    # below. The original implementation resampled training data and
+    # refit the model B times WITHOUT adding any residual noise term,
+    # capturing only parameter/estimation uncertainty. This structurally
+    # under-covers the true predictive distribution and is the root
+    # cause of the severely miscalibrated PICP reported for XGBoost in
+    # the manuscript (excluded from main reporting there) — this fix
+    # addresses the root cause directly rather than only working around
+    # it downstream.
+    train_resid_std = np.std(y_tr - model_fold.predict(X_tr))
 
     # Bootstrap PI (resample training data with replacement)
     boot_preds = np.zeros((BOOTSTRAP_SAMPLES, len(X_te)))
@@ -168,7 +211,11 @@ for fold_idx, test_year in enumerate(range(2015, 2024)):
             random_state=b, n_jobs=-1, verbosity=0
         )
         m_b.fit(X_tr[idx_b], y_tr[idx_b])
-        boot_preds[b] = m_b.predict(X_te)
+        point_pred_b = m_b.predict(X_te)
+        # Add back aleatoric noise (Q1 audit fix) so the bootstrap
+        # distribution reflects predictive, not just parameter,
+        # uncertainty.
+        boot_preds[b] = point_pred_b + rng.normal(0, train_resid_std, size=len(X_te))
 
     # 90% prediction interval from bootstrap distribution
     pi_lo = np.percentile(boot_preds, 5, axis=0)
@@ -177,7 +224,11 @@ for fold_idx, test_year in enumerate(range(2015, 2024)):
     # Metrics
     fold_rmse = np.sqrt(np.mean((y_te - y_pred) ** 2))
     fold_mae  = np.mean(np.abs(y_te - y_pred))
-    fold_ss   = 1 - fold_rmse / (np.std(y_te) if np.std(y_te) > 0 else 1)
+    # Q1 AUDIT FIX: SkillScore vs leakage-free per-fold expanding-window
+    # climatological baseline (y_clim_pred from get_split_data()),
+    # replacing the original np.std(y_te) test-set-derived formula.
+    clim_rmse = np.sqrt(np.mean((y_te - y_clim_pred) ** 2))
+    fold_ss   = 1 - fold_rmse / clim_rmse if clim_rmse > 0 else np.nan
     picp_val  = np.mean((y_te >= pi_lo) & (y_te <= pi_hi))
 
     # Overfitting check: train RMSE vs test RMSE
@@ -186,12 +237,13 @@ for fold_idx, test_year in enumerate(range(2015, 2024)):
 
     wf_results.append({
         "fold": fold_idx + 1, "test_year": test_year,
-        "n_train": len(train),
+        "n_train": len(X_tr),
         "RMSE_train": round(train_rmse, 6),
         "RMSE_test":  round(fold_rmse, 6),
         "overfit_ratio": round(fold_rmse / train_rmse, 3),
         "MAE": round(fold_mae, 6),
         "SkillScore": round(fold_ss, 4),
+        "ClimRMSE": round(clim_rmse, 6),
         "PICP_90": round(picp_val, 4),
     })
 
@@ -227,7 +279,18 @@ print("=" * 60)
 
 # Train on all data (2005-2023) for feature importance analysis
 # NOTE: this model is for SHAP analysis only — NOT for evaluation
-full_train = df[df["YEAR"] <= 2023]
+full_train = df[df["YEAR"] <= 2023].copy()
+
+# Q1 AUDIT FIX: recompute anomaly-derived features using ONLY the
+# 2005-2023 climatology (excludes the 2024-2025 holdout, consistent
+# with the manuscript's statement that the holdout is "not used in any
+# development step"). The original code reused the *_anom columns
+# precomputed once on the full 2005-2025 sample in notebook 03, which
+# would leak 2024-2025 holdout information into this SHAP model.
+for col in RAW_ANOMALY_SOURCE_COLS:
+    full_train[f"{col}_anom"] = full_train[col] - full_train.groupby("MONTH")[col].transform("mean")
+full_train["ONI_x_CLOUD_anom"] = full_train["ONI"] * full_train["CLOUD_anom"]
+
 model_full = xgb.XGBRegressor(
     **best_params,
     reg_alpha=0.1, reg_lambda=1.0,

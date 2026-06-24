@@ -76,6 +76,23 @@ COLORS = {
 # ── Load data ──────────────────────────────────────────────────────────────
 df = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
 
+# Q1 AUDIT FIX: GHI_anom/CLOUD_anom/PRECTOT_anom/T2M_anom are no longer
+# precomputed in 03_model_ready.parquet (they are now computed per-fold
+# downstream to eliminate the leakage documented in
+# 39_CODE_AUDIT_CRITICAL_FINDINGS.md, finding #1). For this notebook's
+# purpose -- static, descriptive visualisation of the full 21-year
+# series, not predictive evaluation -- recomputing them on the full
+# sample here is methodologically legitimate (identical to the
+# df_report pattern used in notebooks 03/05/07/08 for VIF/SHAP
+# diagnostics). These columns must NEVER be fed back into any walk-
+# forward model fit.
+RAW_ANOMALY_SOURCE_COLS = ["GHI", "CLOUD", "PRECTOT", "T2M"]
+for _col in RAW_ANOMALY_SOURCE_COLS:
+    if f"{_col}_anom" not in df.columns:
+        df[f"{_col}_anom"] = df[_col] - df.groupby("MONTH")[_col].transform("mean")
+if "ONI_x_CLOUD_anom" not in df.columns and "ONI" in df.columns:
+    df["ONI_x_CLOUD_anom"] = df["ONI"] * df["CLOUD_anom"]
+
 # Load predictions (with fallback to synthetic if pipeline not fully run)
 try:
     df_ols = pd.read_parquet(f"{DATA_DIR}/05_ols_predictions.parquet")

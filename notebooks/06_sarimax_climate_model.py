@@ -23,7 +23,7 @@ import statsmodels.api as sm
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.stats.diagnostic import acorr_ljungbox
-import itertools, warnings, os
+import itertools, warnings, os, sys
 from pathlib import Path
 warnings.filterwarnings("ignore")
 
@@ -31,11 +31,21 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 OUT_DIR  = BASE_DIR / "outputs"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(BASE_DIR.parent))  # utils.py lives at repo root, one level above notebooks/
+from utils import skill_score, climatology_baseline_predict, piaw, winkler_score  # noqa: E402
 
-df = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
-df = df.set_index("DATE").asfreq("MS")   # Monthly Start frequency
+df_raw = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")  # keeps YEAR/MONTH/DATE as columns, used for per-fold climatology
+df = df_raw.set_index("DATE").asfreq("MS")   # Monthly Start frequency
 
 TARGET = "Y_stoch"
+
+# Q1 AUDIT NOTE: SARIMAX in this notebook uses ONI as its only exogenous
+# regressor (EXOG_COLS below) — NOT GHI_anom/CLOUD_anom/PRECTOT_anom.
+# The full-sample climatology leakage fixed in notebooks 03/05/07/09 does
+# NOT apply to this notebook's feature construction. The fix needed here
+# is limited to the walk-forward SkillScore baseline (see Part C below),
+# which previously used np.std(y_te) — the test set's own variability —
+# instead of a real climatological forecast.
 
 print(f"Loaded: {len(df)} monthly observations")
 print(f"Period: {df.index.min().date()} → {df.index.max().date()}")
@@ -219,10 +229,27 @@ for fold_idx, test_year in enumerate(range(2015, 2024)):
         # Metrics
         fold_rmse = np.sqrt(np.mean((y_te - y_pred) ** 2))
         fold_mae  = np.mean(np.abs(y_te - y_pred))
-        fold_ss   = 1 - fold_rmse / (np.std(y_te) if np.std(y_te) > 0 else 1)
+        # Q1 AUDIT FIX: SkillScore now computed against a leakage-free
+        # per-fold expanding-window climatological baseline (calendar-
+        # month mean of TARGET from `train` only), instead of the
+        # original np.std(y_te) — the test set's own standard deviation,
+        # which is not a forecasting baseline at all and does not match
+        # the "per-fold expanding-window climatological baseline"
+        # methodology described in the manuscript (Section 3.5).
+        clim_by_month = train.groupby(train.index.month)[TARGET].mean()
+        y_clim_pred = test.index.month.map(clim_by_month).values
+        clim_rmse = np.sqrt(np.mean((y_te - y_clim_pred) ** 2))
+        fold_ss   = 1 - fold_rmse / clim_rmse if clim_rmse > 0 else np.nan
 
         # PICP (95% PI)
         picp_val = np.mean((y_te >= pi_lo) & (y_te <= pi_hi))
+
+        # Q1 AUDIT FIX: Winkler Score and PIAW were cited repeatedly in
+        # the manuscript (Section 4.3, Table 6, Figures 8/9) but were
+        # never actually computed anywhere in this repository. Added
+        # here using utils.winkler_score()/utils.piaw().
+        piaw_val    = piaw(pi_lo, pi_hi)
+        winkler_val = winkler_score(y_te, pi_lo, pi_hi, alpha=0.05)
 
         wf_results.append({
             "fold": fold_idx + 1, "test_year": test_year,
@@ -230,6 +257,8 @@ for fold_idx, test_year in enumerate(range(2015, 2024)):
             "RMSE": round(fold_rmse, 6), "MAE": round(fold_mae, 6),
             "SkillScore": round(fold_ss, 4),
             "PICP_95": round(picp_val, 4),
+            "PIAW": round(piaw_val, 6),
+            "Winkler": round(winkler_val, 6),
             "converged": True
         })
         all_y_true_sarimax.extend(y_te)
@@ -316,3 +345,5 @@ print(f"\n✅ Notebook 06 complete.")
 print(f"   Best SARIMAX order: {BEST_ORDER}{BEST_SEASONAL}")
 print(f"   Walk-forward mean RMSE: {valid_folds['RMSE'].mean():.6f}")
 print(f"   PICP 95%: {valid_folds['PICP_95'].mean():.4f} (nominal: 0.950)")
+print(f"   Mean PIAW: {valid_folds['PIAW'].mean():.4f} kWh/m\u00b2/day")
+print(f"   Mean Winkler Score (\u03b1=0.05): {valid_folds['Winkler'].mean():.4f} kWh/m\u00b2/day")

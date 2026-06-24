@@ -28,7 +28,7 @@ from statsmodels.stats.stattools import durbin_watson, jarque_bera
 from statsmodels.tsa.stattools import adfuller, kpss
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from scipy import stats
-import os, warnings
+import os, sys, warnings
 from pathlib import Path
 warnings.filterwarnings("ignore")
 
@@ -36,12 +36,28 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 OUT_DIR  = BASE_DIR / "outputs"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(BASE_DIR.parent))  # utils.py lives at repo root, one level above notebooks/
+from utils import get_split_data, skill_score, verify_no_feature_leakage  # noqa: E402
 
 df = pd.read_parquet(f"{DATA_DIR}/03_model_ready.parquet")
 FINAL_FEATURES = pd.read_csv(f"{DATA_DIR}/03_final_features.csv")["feature"].tolist()
 TARGET = "Y_stoch"
+RAW_ANOMALY_SOURCE_COLS = ["GHI", "CLOUD", "PRECTOT", "T2M"]
 
 print(f"Loaded: {len(df)} observations, {len(FINAL_FEATURES)} features")
+
+# ── Q1 AUDIT FIX NOTE ────────────────────────────────────────────────────
+# 03_model_ready.parquet no longer contains GHI_anom / CLOUD_anom /
+# PRECTOT_anom / ONI_x_CLOUD_anom (they were removed from notebook 03 to
+# eliminate a confirmed full-sample climatology leakage). Part A below is
+# a FULL-SAMPLE INFERENTIAL fit (not a held-out forecast evaluation), so
+# computing anomalies on the full sample here is methodologically
+# legitimate — exactly analogous to notebook 03's df_report. Part D
+# (walk-forward) below instead uses utils.get_split_data() to recompute
+# these anomalies PER FOLD from training data only.
+for col in RAW_ANOMALY_SOURCE_COLS:
+    df[f"{col}_anom"] = df[col] - df.groupby("MONTH")[col].transform("mean")
+df["ONI_x_CLOUD_anom"] = df["ONI"] * df["CLOUD_anom"]
 
 # ══════════════════════════════════════════════════════════════════════════
 # PART A: FULL-SAMPLE OLS-HC3 MODEL
@@ -57,12 +73,18 @@ y_full = df[TARGET]
 # HC3 is preferred for n<250: provides better finite-sample correction
 ols_hc3 = sm.OLS(y_full, X_full).fit(cov_type="HC3")
 
-print(f"\n  Model: OLS-HC3 | n={len(df)} | k={len(FINAL_FEATURES)+1}")
+print(f"\n  Model: OLS-HC3 (full 12-feature set, for VIF/diagnostic completeness) "
+      f"| n={len(df)} | k={len(FINAL_FEATURES)+1}")
 print(f"  R²         = {ols_hc3.rsquared:.4f}")
 print(f"  Adj. R²    = {ols_hc3.rsquared_adj:.4f}")
 print(f"  F-stat     = {ols_hc3.fvalue:.4f}  (p={ols_hc3.f_pvalue:.4e})")
 print(f"  AIC        = {ols_hc3.aic:.2f}")
 print(f"  BIC        = {ols_hc3.bic:.2f}")
+print(f"  NOTE: this 12-feature fit includes GHI_x_CLOUD (VIF≈2900+) and "
+      f"T2M_x_RH (VIF≈2000+), which destabilizes GHI_anom's coefficient "
+      f"via severe multicollinearity. This specification is reported here "
+      f"ONLY for completeness/VIF diagnostics. The manuscript's primary "
+      f"inferential claims use the LOW-VIF specification below.")
 
 print(f"\n  {'Feature':<22} {'Coef':>10} {'HC3-SE':>10} {'t-stat':>8} {'p-val':>8} {'Sig':>5}")
 print(f"  {'-'*70}")
@@ -75,7 +97,7 @@ for name, coef, se, t, p in zip(
     sig = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "."
     print(f"  {name:<22} {coef:>10.5f} {se:>10.5f} {t:>8.3f} {p:>8.4f} {sig:>5}")
 
-# Save coefficient table
+# Save coefficient table (full 12-feature specification, diagnostic use)
 coef_df = pd.DataFrame({
     "Feature":  ols_hc3.params.index,
     "Coef":     ols_hc3.params.values,
@@ -85,6 +107,77 @@ coef_df = pd.DataFrame({
     "CI_lower": ols_hc3.conf_int()[0].values,
     "CI_upper": ols_hc3.conf_int()[1].values,
 }).round(6)
+coef_df.to_csv(f"{OUT_DIR}/05_ols_coefficients_FULL12.csv", index=False)
+
+# ══════════════════════════════════════════════════════════════════════════
+# PART A2: LOW-VIF OLS-HC3 SPECIFICATION (Q1 AUDIT FIX — was MISSING)
+# ══════════════════════════════════════════════════════════════════════════
+"""
+Q1 CODE AUDIT FIX (2026-06-20): The manuscript's primary inferential
+claims (Abstract, Section 4.2, Table 5) report an 8-feature "low-VIF"
+OLS-HC3 specification — excluding the two extreme-VIF interaction terms
+(GHI_x_CLOUD VIF≈2900+, T2M_x_RH VIF≈2000+) and the redundant GHI_lag12
+and ONI_x_CLOUD_anom terms — with GHI_anom as the headline significant
+predictor (manuscript: β=+0.088, p<0.001).
+
+This specification did NOT exist anywhere in the repository prior to
+this fix: notebook 05 only ever fit the full 12-feature set above, in
+which severe multicollinearity from GHI_x_CLOUD destabilizes and can
+even reverse the sign of GHI_anom's coefficient (see printed full-
+specification table above for comparison). Without this fix, the
+manuscript's single most load-bearing empirical claim had no
+corresponding, reproducible code path in this codebase.
+"""
+print("\n" + "=" * 60)
+print("PART A2: LOW-VIF OLS-HC3 SPECIFICATION (manuscript's primary inferential model)")
+print("=" * 60)
+
+LOW_VIF_FEATURES = ["sin_month", "cos_month", "GHI_anom", "CLOUD_anom",
+                     "PRECTOT_anom", "ONI", "ONI_lag2", "GHI_lag1"]
+missing = [f for f in LOW_VIF_FEATURES if f not in FINAL_FEATURES]
+assert not missing, f"LOW_VIF_FEATURES references unknown columns: {missing}"
+
+X_lowvif = sm.add_constant(df[LOW_VIF_FEATURES])
+ols_lowvif = sm.OLS(y_full, X_lowvif).fit(cov_type="HC3")
+
+print(f"\n  Model: OLS-HC3 (LOW-VIF, 8 features) | n={len(df)} | k={len(LOW_VIF_FEATURES)+1}")
+print(f"  R²         = {ols_lowvif.rsquared:.4f}")
+print(f"  Adj. R²    = {ols_lowvif.rsquared_adj:.4f}")
+print(f"  AIC        = {ols_lowvif.aic:.2f}")
+print(f"  BIC        = {ols_lowvif.bic:.2f}")
+
+print(f"\n  {'Feature':<22} {'Coef':>10} {'HC3-SE':>10} {'t-stat':>8} {'p-val':>8} {'Sig':>5}")
+print(f"  {'-'*70}")
+for name, coef, se, t, p in zip(
+        ols_lowvif.params.index, ols_lowvif.params.values,
+        ols_lowvif.bse.values, ols_lowvif.tvalues.values,
+        ols_lowvif.pvalues.values):
+    sig = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "."
+    print(f"  {name:<22} {coef:>10.5f} {se:>10.5f} {t:>8.3f} {p:>8.4f} {sig:>5}")
+
+# VIF check for the low-VIF specification itself
+X_vif_check = df[LOW_VIF_FEATURES].copy()
+vif_lowvif = pd.DataFrame({
+    "Feature": LOW_VIF_FEATURES,
+    "VIF": [variance_inflation_factor(X_vif_check.values, i)
+            for i in range(X_vif_check.shape[1])]
+}).sort_values("VIF", ascending=False).round(3)
+print(f"\n  Low-VIF specification VIF check:")
+print(vif_lowvif.to_string(index=False))
+
+coef_lowvif_df = pd.DataFrame({
+    "Feature":  ols_lowvif.params.index,
+    "Coef":     ols_lowvif.params.values,
+    "HC3_SE":   ols_lowvif.bse.values,
+    "t_stat":   ols_lowvif.tvalues.values,
+    "p_value":  ols_lowvif.pvalues.values,
+    "CI_lower": ols_lowvif.conf_int()[0].values,
+    "CI_upper": ols_lowvif.conf_int()[1].values,
+}).round(6)
+coef_lowvif_df.to_csv(f"{OUT_DIR}/05_ols_coefficients.csv", index=False)
+vif_lowvif.to_csv(f"{OUT_DIR}/05_ols_lowvif_vif.csv", index=False)
+print(f"\n  Saved: outputs/05_ols_coefficients.csv (LOW-VIF spec — manuscript's primary table)")
+print(f"  Saved: outputs/05_ols_coefficients_FULL12.csv (full 12-feature — diagnostic only)")
 
 # ══════════════════════════════════════════════════════════════════════════
 # PART B: UNIT ROOT TESTS (Pre-modeling)
@@ -136,8 +229,14 @@ print("\n" + "=" * 60)
 print("PART C: RESIDUAL DIAGNOSTICS (Post-estimation)")
 print("=" * 60)
 
-resid = ols_hc3.resid.values
-y_hat = ols_hc3.fittedvalues.values
+# Q1 AUDIT FIX: diagnostics now computed on the LOW-VIF specification
+# (ols_lowvif), the manuscript's primary inferential model, rather than
+# the full 12-feature ols_hc3 (which includes the extreme-VIF
+# interaction terms and is reported only for completeness in Part A).
+print("  NOTE: diagnostics below are for the LOW-VIF (8-feature) "
+      "specification — the manuscript's primary inferential model.")
+resid = ols_lowvif.resid.values
+y_hat = ols_lowvif.fittedvalues.values
 
 diag_results = {}
 
@@ -171,14 +270,14 @@ for lag, row in lb_results.iterrows():
     }
 
 # 4. White test (heteroskedasticity)
-white_stat, white_p, white_f, white_fp = het_white(resid, X_full)
+white_stat, white_p, white_f, white_fp = het_white(resid, X_lowvif)  # Q1 fix: match low-VIF resid
 diag_results["White_Test"] = {
     "stat": round(white_stat, 4), "p_value": round(white_p, 4),
     "interpretation": "Heteroskedastic → HC3 SE correct choice" if white_p < 0.05 else "Homoskedastic"
 }
 
 # 5. Breusch-Pagan
-bp_stat, bp_p, bp_f, bp_fp = het_breuschpagan(resid, X_full)
+bp_stat, bp_p, bp_f, bp_fp = het_breuschpagan(resid, X_lowvif)  # Q1 fix: match low-VIF resid
 diag_results["Breusch_Pagan"] = {
     "stat": round(bp_stat, 4), "p_value": round(bp_p, 4),
     "interpretation": "Heteroskedastic" if bp_p < 0.05 else "Homoskedastic"
@@ -218,33 +317,44 @@ wf_results = []
 all_y_true, all_y_pred = [], []
 
 for fold_idx, test_year in enumerate(range(2015, 2024)):
-    train = df[df["YEAR"] < test_year]
-    test  = df[df["YEAR"] == test_year]
+    # Q1 AUDIT FIX: real leakage guard — fails loudly if per-fold
+    # anomaly recomputation is not actually taking effect for this fold.
+    verify_no_feature_leakage(df, test_year, RAW_ANOMALY_SOURCE_COLS)
 
-    X_tr = sm.add_constant(train[FINAL_FEATURES], has_constant="add")
-    y_tr = train[TARGET]
-    X_te = sm.add_constant(test[FINAL_FEATURES], has_constant="add")
-    y_te = test[TARGET].values
+    X_tr_arr, y_tr_arr, X_te_arr, y_te, dates_te, y_clim_pred = get_split_data(
+        df, test_year, features=FINAL_FEATURES,
+        raw_anomaly_source_cols=RAW_ANOMALY_SOURCE_COLS, target=TARGET
+    )
+    n_train = (df["YEAR"] < test_year).sum()
+    n_test  = (df["YEAR"] == test_year).sum()
 
-    # Refit OLS on expanding training window
-    fold_ols = sm.OLS(y_tr, X_tr).fit(cov_type="HC3")
-    y_pred   = fold_ols.predict(X_te)
+    X_tr = sm.add_constant(pd.DataFrame(X_tr_arr, columns=FINAL_FEATURES), has_constant="add")
+    X_te = sm.add_constant(pd.DataFrame(X_te_arr, columns=FINAL_FEATURES), has_constant="add")
+
+    # Refit OLS on expanding training window (features now leakage-free
+    # per-fold anomalies, NOT the full-sample version used in Part A)
+    fold_ols = sm.OLS(y_tr_arr, X_tr).fit(cov_type="HC3")
+    y_pred   = fold_ols.predict(X_te).values
 
     fold_rmse = np.sqrt(np.mean((y_te - y_pred) ** 2))
     fold_mae  = np.mean(np.abs(y_te - y_pred))
-    fold_ss   = 1 - fold_rmse / np.sqrt(np.mean((y_te - y_te.mean()) ** 2))
+    # Q1 AUDIT FIX: skill score now computed against the leakage-free
+    # per-fold expanding-window climatological baseline (y_clim_pred),
+    # NOT against the test set's own mean (the original bug).
+    fold_ss   = skill_score(y_te, y_pred, y_clim_pred)
 
     wf_results.append({
         "fold": fold_idx + 1, "test_year": test_year,
-        "n_train": len(train), "n_test": len(test),
+        "n_train": int(n_train), "n_test": int(n_test),
         "RMSE": round(fold_rmse, 6), "MAE": round(fold_mae, 6),
         "SkillScore": round(fold_ss, 4),
+        "ClimRMSE": round(np.sqrt(np.mean((y_te - y_clim_pred) ** 2)), 6),
         "R2_train": round(fold_ols.rsquared, 4)
     })
     all_y_true.extend(y_te)
     all_y_pred.extend(y_pred)
 
-    print(f"  Fold {fold_idx+1} ({test_year}): train={len(train):3d} | "
+    print(f"  Fold {fold_idx+1} ({test_year}): train={len(X_tr_arr):3d} | "
           f"RMSE={fold_rmse:.5f} | MAE={fold_mae:.5f} | SS={fold_ss:.3f}")
 
 df_wf = pd.DataFrame(wf_results)
@@ -253,7 +363,13 @@ print(f"\n  AGGREGATE OLS Walk-forward RMSE: {overall_rmse:.6f}")
 print(f"  AGGREGATE OLS SkillScore: {df_wf['SkillScore'].mean():.4f} ± {df_wf['SkillScore'].std():.4f}")
 
 # ── SAVE ──────────────────────────────────────────────────────────────────
-coef_df.to_csv(f"{OUT_DIR}/05_ols_coefficients.csv", index=False)
+# NOTE (Q1 audit fix): coef_df (full 12-feature spec) was already saved
+# to 05_ols_coefficients_FULL12.csv in Part A above. coef_lowvif_df (the
+# manuscript's primary low-VIF specification) was already saved to
+# 05_ols_coefficients.csv in Part A2. Do NOT re-save coef_df to that
+# filename here -- doing so would silently overwrite the low-VIF result
+# with the full-12-feature one, reintroducing the exact discrepancy this
+# fix was meant to resolve.
 df_wf.to_csv(f"{OUT_DIR}/05_ols_walkforward_results.csv", index=False)
 pd.DataFrame(list(diag_results.items()), columns=["Test","Results"]).to_csv(
     f"{OUT_DIR}/05_ols_diagnostics.csv", index=False)
