@@ -1,5 +1,7 @@
 # FINAL PROJECT SUMMARY
+
 ## Climate-Aware Stochastic PV Forecasting — Complete JourneyS
+
 ## Bontang, East Kalimantan, Indonesia | NASA POWER 2005–2025
 
 ---
@@ -12,41 +14,41 @@
 
 ### Primary Submission Files
 
-| File | Keterangan | Status |
-|---|---|---|
+| File                              | Keterangan                             | Status   |
+| --------------------------------- | -------------------------------------- | -------- |
 | **PV_Leakage_REVISED_FINAL.docx** | Manuscript utama (post-major-revision) | ✅ READY |
-| **PV_Leakage_Supplementary.docx** | Tables S1–S5 | ✅ READY |
-| **graphical_abstract.svg** | Graphical abstract (Elsevier format) | ✅ READY |
+| **PV_Leakage_Supplementary.docx** | Tables S1–S5                           | ✅ READY |
+| **graphical_abstract.svg**        | Graphical abstract (Elsevier format)   | ✅ READY |
 
 ### Figures (14 total, 300 DPI)
 
-| Figure | Keterangan | Status |
-|---|---|---|
-| fig01_research_framework | Diagram alur penelitian | ✅ |
-| fig02_leakage_demonstration | R²=0.9999 vs R²=0.226 | ✅ **CORE** |
-| figNEW_A_sensitivity_heatmap | 15-scenario sensitivity | ✅ **CORE** |
-| fig03_data_profile | 21-year time series | ✅ |
-| fig04_seasonal_climatology | Monthly GHI & CLOUD boxes | ✅ |
-| fig05_enso_teleconnection | ONI vs GHI anomaly | ⚠ Regenerate setelah real ONI |
-| fig06_stochastic_target_architecture | 7 loss components | ✅ |
-| fig07_walkforward_scheme | 9-fold expanding window | ✅ |
-| fig08_model_performance | RMSE + SS per fold | ✅ **CORE** |
-| fig09_sarimax_prediction_intervals | 9-panel PI plot | ✅ |
-| fig10_shap_summary | Feature importance beeswarm | ✅ |
-| fig11_ols_xai_correspondence | OLS vs SHAP concordance | ✅ |
-| fig12_residual_diagnostics | ACF/PACF/QQ/residuals | ✅ |
-| figNEW_B_enso_violin | ENSO phase errors + KW p | ⚠ Regenerate setelah real ONI |
+| Figure                               | Keterangan                  | Status                        |
+| ------------------------------------ | --------------------------- | ----------------------------- |
+| fig01_research_framework             | Diagram alur penelitian     | ✅                            |
+| fig02_leakage_demonstration          | R²=0.9999 vs R²=0.226       | ✅ **CORE**                   |
+| figNEW_A_sensitivity_heatmap         | 15-scenario sensitivity     | ✅ **CORE**                   |
+| fig03_data_profile                   | 21-year time series         | ✅                            |
+| fig04_seasonal_climatology           | Monthly GHI & CLOUD boxes   | ✅                            |
+| fig05_enso_teleconnection            | ONI vs GHI anomaly          | ⚠ Regenerate setelah real ONI |
+| fig06_stochastic_target_architecture | 7 loss components           | ✅                            |
+| fig07_walkforward_scheme             | 9-fold expanding window     | ✅                            |
+| fig08_model_performance              | RMSE + SS per fold          | ✅ **CORE**                   |
+| fig09_sarimax_prediction_intervals   | 9-panel PI plot             | ✅                            |
+| fig10_shap_summary                   | Feature importance beeswarm | ✅                            |
+| fig11_ols_xai_correspondence         | OLS vs SHAP concordance     | ✅                            |
+| fig12_residual_diagnostics           | ACF/PACF/QQ/residuals       | ✅                            |
+| figNEW_B_enso_violin                 | ENSO phase errors + KW p    | ⚠ Regenerate setelah real ONI |
 
 ### Supporting Documents
 
-| File | Keterangan |
-|---|---|
+| File                            | Keterangan                                          |
+| ------------------------------- | --------------------------------------------------- |
 | 24_cover_letter_and_response.md | Cover letter Energy AI + template reviewer response |
-| 26_github_readme.md | README untuk repository GitHub |
-| 27_oni_integration_complete.py | Script integrasi ONI resmi NOAA |
-| 29_NEXT_STEPS_ACTION_CARD.md | Action card singkat |
-| 30_major_revision_complete.md | Diagnosis + rencana + teks revisi lengkap |
-| 31_revision_changelog.md | Daftar perubahan terperinci |
+| 26_github_readme.md             | README untuk repository GitHub                      |
+| 27_oni_integration_complete.py  | Script integrasi ONI resmi NOAA                     |
+| 29_NEXT_STEPS_ACTION_CARD.md    | Action card singkat                                 |
+| 30_major_revision_complete.md   | Diagnosis + rencana + teks revisi lengkap           |
+| 31_revision_changelog.md        | Daftar perubahan terperinci                         |
 
 ---
 
@@ -116,12 +118,12 @@ python3 run_pipeline.py --from 3
 
 ## TARGET SUBMISSION FINAL
 
-| Jurnal | Probabilitas Acceptance | Kondisi |
-|---|---|---|
-| **Energy AI** (Q1) | **52–60%** | Siap submit setelah ONI (penting tapi tidak blocking) |
-| **Solar Energy** (Q1) | **44–50%** | Wajib real ONI sebelum submit |
-| **Renewable Energy** (Q1) | **38–45%** | Fallback jika Energy AI reject |
-| **Energies** (MDPI, Q2) | **65–70%** | Fallback cepat jika perlu |
+| Jurnal                    | Probabilitas Acceptance | Kondisi                                               |
+| ------------------------- | ----------------------- | ----------------------------------------------------- |
+| **Energy AI** (Q1)        | **52–60%**              | Siap submit setelah ONI (penting tapi tidak blocking) |
+| **Solar Energy** (Q1)     | **44–50%**              | Wajib real ONI sebelum submit                         |
+| **Renewable Energy** (Q1) | **38–45%**              | Fallback jika Energy AI reject                        |
+| **Energies** (MDPI, Q2)   | **65–70%**              | Fallback cepat jika perlu                             |
 
 ---
 
@@ -156,20 +158,23 @@ Session 21: Final QA → 32_final_project_summary.md (ini)
 ## TIGA KALIMAT INTI PAPER (TIDAK BERUBAH)
 
 **Kalimat 1 — Core finding (abstract):**
+
 > "Deterministic target construction inflates apparent OLS R² by at least 2.5×
 > (conservative lower bound confirmed across 15 parameterisation scenarios;
 > mean 3.47×, CV = 18.0%)."
 
 **Kalimat 2 — Honest forecastability (results §4.3):**
+
 > "XGBoost exceeds the per-fold climatological baseline in 7 of 9 walk-forward
 > folds (mean SS = +0.085); this directional pattern does not reach statistical
 > significance (Wilcoxon p = 0.102, n = 9 folds)."
 
 **Kalimat 3 — Policy anchor (conclusions):**
+
 > "The leakage diagnosis framework, with open-source Python pipeline, is
 > directly applicable to any NASA POWER site globally."
 
 ---
 
-*Semua angka diverifikasi dari pipeline Python yang dieksekusi pada dataset aktual.*
-*Seed: 42. Repository: https://github.com/Jouqio/climate-aware-pv-forecasting.git*
+_Semua angka diverifikasi dari pipeline Python yang dieksekusi pada dataset aktual._
+_Seed: 42. Repository: https://github.com/Jouqio/climate-aware-pv-forecasting.git_
