@@ -34,4 +34,9 @@ shap>=0.45.0
 
 # ── Visualization ────────────────────────────────────────────
 # NB10: matplotlib, gridspec, patches, FancyArrowPatch, FancyBboxPatch
+# scripts/cross_site_comparison.py: matplotlib.patches
 matplotlib>=3.8.0
+
+# ── Spreadsheet export ───────────────────────────────────────
+# results/combined/: ALL_TABLES_publication_ready.xlsx (pd.ExcelWriter)
+openpyxl>=3.1.0
