@@ -24,18 +24,30 @@ ENV/
 **/.ipynb_checkpoints/
 *.ipynb_checkpoints
 
-# ── Pipeline data output (dibuat oleh NB01–NB03) ─────────────
-# File parquet dibuat otomatis oleh pipeline → tidak perlu di-commit
-data/
-!data/.gitkeep
+# ── Legacy single-site scratch data (dibuat oleh NB01–NB03 saat PV_LOCATION unset) ──
+# Hanya ignore notebooks/data/, BUKAN data/raw/ (raw NASA POWER source,
+# HARUS ter-track) atau results/<site>/data/ (intermediate parquet,
+# TIDAK di-track tapi lewat rule terpisah di bawah).
+/notebooks/data/
+!/notebooks/data/.gitkeep
 
-# ── Pipeline outputs/results (dibuat oleh NB04–NB09) ─────────
-outputs/
-!outputs/.gitkeep
+# ── Per-site intermediate parquet (regeneratable via NB01-03) ────────
+# HANYA results/*/data/, BUKAN data/raw/ (source CSVs, harus tetap
+# ter-track) atau results/combined/ (tidak match pola ini).
+results/*/data/
 
-# ── Figures (dibuat oleh NB10) ────────────────────────────────
-figures/
-!figures/.gitkeep
+# ── Legacy single-site scratch outputs (dibuat oleh NB04–NB09 saat PV_LOCATION unset) ──
+# Hanya ignore notebooks/outputs/, BUKAN results/<site>/outputs/ (hasil
+# numerik per-lokasi, HARUS ter-track) atau results/combined/.
+/notebooks/outputs/
+!/notebooks/outputs/.gitkeep
+
+# ── Legacy single-site figures (dibuat oleh NB10 saat PV_LOCATION unset) ──
+# Hanya ignore notebooks/figures/, BUKAN results/<site>/figures/ atau
+# results/combined/figures/ — kedua yang terakhir ini adalah hasil
+# publikasi yang harus tetap ter-track di git.
+/notebooks/figures/
+!/notebooks/figures/.gitkeep
 
 # ── Saved models (dibuat oleh NB07) ──────────────────────────
 *.pkl
