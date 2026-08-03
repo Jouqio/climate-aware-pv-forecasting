@@ -1,2 +1,0 @@
-n_sites,meta_beta,meta_se,meta_z,meta_CI_lo,meta_CI_hi,Q,Q_p,I2,KW_H_xgb_between_sites,KW_p_xgb_between_sites,spearman_rho_ghisd_leakage,spearman_p_permutation,leakage_min,leakage_max
-10,0.1019,0.00667,15.276,0.08882,0.11497,4.8074,0.8508,0,9.0,0.4373,-0.903,0.0007,1.723,3.434

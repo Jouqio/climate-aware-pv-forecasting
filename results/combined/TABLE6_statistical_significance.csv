@@ -1,7 +1,0 @@
-Test,Statistic,p-value,Conclusion
-"Spearman ρ(GHI_SD, leakage)",ρ=-0.903,"0.0007 (permutation, n=10)",Confirmed: inverse GHI variance-leakage relationship
-Meta-analytic GHI_anom β (FE),z=15.276,≪10⁻⁶,Confirmed: quantitatively stable across regimes
-Heterogeneity Q-test,Q=4.807 (df=9),p_Q=0.8508,I²=0.0%: zero between-site heterogeneity
-KW: XGB SkillScore between sites,H=9.000,p=0.4373,Not confirmed: between-site variation within noise
-XGB Wilcoxon significant sites,3/10,"bontang, balikpapan, makassar",Forecastability confirmed at 3/10 sites
-SHAP rank-1 = GHI_anom,6/10,—,Majority but not universal rank-1 attribution
