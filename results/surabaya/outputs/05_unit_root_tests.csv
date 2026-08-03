@@ -1,0 +1,5 @@
+Series,ADF_stat,ADF_p,ADF_conc,KPSS_stat,KPSS_p,KPSS_conc,Consensus
+Y_stoch,-3.852,0.0024,Stationary,0.324,0.1,Stationary,✓ Stationary
+GHI,-4.203,0.0007,Stationary,0.067,0.1,Stationary,✓ Stationary
+CLOUD,-4.752,0.0001,Stationary,0.137,0.1,Stationary,✓ Stationary
+ONI,-3.321,0.0139,Stationary,0.052,0.1,Stationary,✓ Stationary

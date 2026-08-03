@@ -1,0 +1,11 @@
+Test,Results
+Durbin_Watson,"{'stat': np.float64(2.2021), 'interpretation': 'No autocorr'}"
+Breusch_Godfrey_lag1,"{'stat': np.float64(6.1431), 'p_value': np.float64(0.0132), 'interpretation': 'Serial correlation detected (use Newey-West)'}"
+Breusch_Godfrey_lag12,"{'stat': np.float64(15.9556), 'p_value': np.float64(0.1933), 'interpretation': 'No seasonal autocorrelation'}"
+Ljung_Box_lag1,"{'stat': np.float64(2.5232), 'p_value': np.float64(0.1122), 'interpretation': 'White noise'}"
+Ljung_Box_lag6,"{'stat': np.float64(18.0504), 'p_value': np.float64(0.0061), 'interpretation': 'Residual autocorrelation present'}"
+Ljung_Box_lag12,"{'stat': np.float64(29.1077), 'p_value': np.float64(0.0038), 'interpretation': 'Residual autocorrelation present'}"
+White_Test,"{'stat': np.float64(66.4573), 'p_value': np.float64(0.0124), 'interpretation': 'Heteroskedastic → HC3 SE correct choice'}"
+Breusch_Pagan,"{'stat': np.float64(10.2315), 'p_value': np.float64(0.2492), 'interpretation': 'Homoskedastic'}"
+Jarque_Bera,"{'stat': np.float64(0.3729), 'p_value': np.float64(0.8299), 'skewness': np.float64(-0.0696), 'kurtosis': np.float64(2.8662), 'interpretation': 'Normal residuals'}"
+Shapiro_Wilk,"{'stat': np.float64(0.982), 'p_value': np.float64(0.6409), 'interpretation': 'Normal (consistent with JB)'}"

@@ -1,0 +1,13 @@
+Feature,Importance_gain
+sin_month,0.0257
+T2M_x_RH,0.0252
+CLOUD_anom,0.0199
+cos_month,0.0155
+GHI_lag1,0.0108
+GHI_lag12,0.0101
+GHI_anom,0.0097
+ONI_x_CLOUD_anom,0.0073
+PRECTOT_anom,0.0063
+GHI_x_CLOUD,0.0061
+ONI,0.0053
+ONI_lag2,0.0053
