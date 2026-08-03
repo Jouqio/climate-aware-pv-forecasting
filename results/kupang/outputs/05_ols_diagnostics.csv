@@ -1,0 +1,11 @@
+Test,Results
+Durbin_Watson,"{'stat': np.float64(2.06), 'interpretation': 'No autocorr'}"
+Breusch_Godfrey_lag1,"{'stat': np.float64(2.9933), 'p_value': np.float64(0.0836), 'interpretation': 'No serial correlation'}"
+Breusch_Godfrey_lag12,"{'stat': np.float64(12.7919), 'p_value': np.float64(0.3843), 'interpretation': 'No seasonal autocorrelation'}"
+Ljung_Box_lag1,"{'stat': np.float64(0.2678), 'p_value': np.float64(0.6048), 'interpretation': 'White noise'}"
+Ljung_Box_lag6,"{'stat': np.float64(36.8944), 'p_value': np.float64(0.0), 'interpretation': 'Residual autocorrelation present'}"
+Ljung_Box_lag12,"{'stat': np.float64(68.3361), 'p_value': np.float64(0.0), 'interpretation': 'Residual autocorrelation present'}"
+White_Test,"{'stat': np.float64(46.0122), 'p_value': np.float64(0.3486), 'interpretation': 'Homoskedastic'}"
+Breusch_Pagan,"{'stat': np.float64(7.6264), 'p_value': np.float64(0.4708), 'interpretation': 'Homoskedastic'}"
+Jarque_Bera,"{'stat': np.float64(0.1872), 'p_value': np.float64(0.9107), 'skewness': np.float64(-0.0189), 'kurtosis': np.float64(2.8685), 'interpretation': 'Normal residuals'}"
+Shapiro_Wilk,"{'stat': np.float64(0.9902), 'p_value': np.float64(0.9506), 'interpretation': 'Normal (consistent with JB)'}"

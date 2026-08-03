@@ -1,0 +1,4 @@
+ENSO_phase,n_months,top1_feature,top2_feature,top3_feature,ONI_SHAP_mean,CLOUD_SHAP_mean
+ElNino,34,GHI_anom,CLOUD_anom,GHI_lag1,0.001045,0.01203
+Neutral,142,GHI_anom,GHI_lag1,CLOUD_anom,0.001113,-0.000351
+LaNina,40,GHI_anom,CLOUD_anom,sin_month,-0.001162,-0.011614

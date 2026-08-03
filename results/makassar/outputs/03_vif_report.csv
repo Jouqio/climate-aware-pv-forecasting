@@ -1,0 +1,13 @@
+Feature,VIF
+GHI_x_CLOUD,392.107
+T2M_x_RH,264.601
+GHI_lag1,134.626
+GHI_lag12,85.965
+CLOUD_anom,19.814
+ONI,10.474
+ONI_lag2,9.358
+GHI_anom,8.781
+sin_month,8.582
+cos_month,5.028
+PRECTOT_anom,2.343
+ONI_x_CLOUD_anom,1.751
