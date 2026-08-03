@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Generate combined cross-site outputs from results/<site>/outputs/*.csv"""
 import sys, os
 from pathlib import Path
