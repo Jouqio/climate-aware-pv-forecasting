@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Multi-site pipeline orchestrator. Auto-discovers sites from data/raw/*.csv."""
 import argparse, subprocess, sys, time
 from pathlib import Path
