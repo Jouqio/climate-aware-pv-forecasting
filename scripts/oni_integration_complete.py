@@ -1,14 +1,14 @@
 """
-=============================================================================
+============================================================================
 ONI_INTEGRATION_COMPLETE.PY
-=============================================================================
+============================================================================
 Complete implementation for integrating official NOAA CPC ONI data.
 This is the SINGLE REMAINING BLOCKING TASK before journal submission.
 
 Run this script ONCE, then run: python3 run_pipeline.py --from 3
 
 Estimated time: 30 minutes (download + integration + pipeline re-run)
-=============================================================================
+============================================================================
 """
 
 import pandas as pd
@@ -20,9 +20,9 @@ import sys
 
 DATA_DIR = "/home/claude/pv_research/data"
 
-# ══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════
 # STEP 1: DOWNLOAD OFFICIAL NOAA CPC ONI DATA
-# ══════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════
 print("=" * 60)
 print("STEP 1: Downloading NOAA CPC ONI data")
 print("=" * 60)
