@@ -1,0 +1,11 @@
+site,rank1,shap_val
+medan,GHI_x_CLOUD,0.01872
+pekanbaru,GHI_anom,0.02162
+pontianak,GHI_anom,0.02022
+bontang,GHI_anom,0.0132
+samarinda,GHI_anom,0.02549
+balikpapan,GHI_anom,0.01322
+makassar,T2M_x_RH,0.02455
+surabaya,T2M_x_RH,0.02525
+kupang,GHI_lag12,0.02414
+jayapura,GHI_anom,0.01179

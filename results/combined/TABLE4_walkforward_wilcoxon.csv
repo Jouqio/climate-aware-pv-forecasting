@@ -1,0 +1,12 @@
+Location,Regime,OLS RMSE,OLS SS,XGB RMSE,XGB SS,Wilcoxon p,Pos/9,Sig
+Medan,Equatorial Wet,0.06588,+0.1275,0.06818,+0.0970,0.2852,6,ns
+Pekanbaru,Equatorial Wet,0.06517,+0.0723,0.06788,+0.0338,0.2129,5,ns
+Pontianak,Equatorial Maritime,0.07440,-0.0267,0.07616,-0.0510,0.8203,3,ns
+Bontang,Equatorial Maritime,0.06960,+0.0230,0.06643,+0.0674,0.0098,7,**
+Samarinda,Equatorial Maritime,0.06846,+0.1188,0.07151,+0.0795,0.0820,7,ns
+Balikpapan,Equatorial Maritime,0.07374,-0.0207,0.06681,+0.0751,0.0020,9,**
+Makassar,Monsoonal,0.08448,+0.1586,0.06976,+0.3051,0.0371,7,*
+Surabaya,Tropical Monsoon,0.07334,+0.1610,0.07328,+0.1617,0.2129,5,ns
+Kupang,Semi-Arid Tropical,0.08578,+0.1533,0.08307,+0.1800,0.1250,6,ns
+Jayapura,Equatorial Rainforest,0.07527,+0.0225,0.06841,+0.1116,0.0645,7,ns
+KW between sites,n=10,—,—,—,—,H=9.000,p=0.4373,ns

@@ -1,0 +1,11 @@
+Location,Regime,Rank-1 Feature,Mean|SHAP|
+Medan,Equatorial Wet,GHI_x_CLOUD,0.01872
+Pekanbaru,Equatorial Wet,GHI_anom,0.02162
+Pontianak,Equatorial Maritime,GHI_anom,0.02022
+Bontang,Equatorial Maritime,GHI_anom,0.01320
+Samarinda,Equatorial Maritime,GHI_anom,0.02549
+Balikpapan,Equatorial Maritime,GHI_anom,0.01322
+Makassar,Monsoonal,T2M_x_RH,0.02455
+Surabaya,Tropical Monsoon,T2M_x_RH,0.02525
+Kupang,Semi-Arid Tropical,GHI_lag12,0.02414
+Jayapura,Equatorial Rainforest,GHI_anom,0.01179
