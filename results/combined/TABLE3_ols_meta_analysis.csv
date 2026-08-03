@@ -1,0 +1,13 @@
+Location,Regime,β,SE,t,p,Sig
+Medan,Equatorial Wet,+0.12538,0.01874,6.692,<0.0001,***
+Pekanbaru,Equatorial Wet,+0.11167,0.01423,7.844,<0.0001,***
+Pontianak,Equatorial Maritime,+0.10433,0.01462,7.136,<0.0001,***
+Bontang,Equatorial Maritime,+0.08743,0.02781,3.144,0.00167,**
+Samarinda,Equatorial Maritime,+0.09123,0.02413,3.781,0.00016,***
+Balikpapan,Equatorial Maritime,+0.10671,0.02115,5.045,<0.0001,***
+Makassar,Monsoonal,+0.08356,0.03786,2.207,0.02732,*
+Surabaya,Tropical Monsoon,+0.08849,0.03045,2.906,0.00366,**
+Kupang,Semi-Arid Tropical,+0.07497,0.03186,2.353,0.01862,*
+Jayapura,Equatorial Rainforest,+0.07870,0.02235,3.521,0.00043,***
+META-ANALYSIS (FE),n=10,+0.10190,0.00667,15.276,<1e-06,***
+Heterogeneity,I²=0.0%,Q=4.807,df=9,p_Q=0.8508,—,—
